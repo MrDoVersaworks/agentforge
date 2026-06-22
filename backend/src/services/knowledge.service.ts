@@ -12,7 +12,7 @@ interface AddDocumentInput {
 
 export function chunkText(text: string, chunkSize: number = 800, overlap: number = 150): string[] {
   const chunks: string[] = [];
-  if (!text || text.trim().length === 0) return chunks;
+  if (!text ? true : text.trim().length === 0) return chunks;
 
   let i = 0;
   while (i < text.length) {
@@ -51,7 +51,16 @@ export async function addDocument(userId: string, agentId: string, input: AddDoc
     .limit(1);
 
   const user = userRows[0];
-  if (!user || !user.encrypted_gemini_key || !user.gemini_key_iv || !user.gemini_key_tag) {
+  if (!user) {
+    throw new Error('Please configure your Gemini API Key in Settings first.');
+  }
+  if (!user.encrypted_gemini_key) {
+    throw new Error('Please configure your Gemini API Key in Settings first.');
+  }
+  if (!user.gemini_key_iv) {
+    throw new Error('Please configure your Gemini API Key in Settings first.');
+  }
+  if (!user.gemini_key_tag) {
     throw new Error('Please configure your Gemini API Key in Settings first.');
   }
 

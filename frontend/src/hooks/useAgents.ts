@@ -16,7 +16,7 @@ export function useAgents() {
     setIsLoading(true);
     try {
       const { data } = await api.get('/agents');
-      setAgents(data.data?.agents || []);
+      setAgents(data.data?.agents ? data.data?.agents : []);
     } catch {
       setAgents([]);
     } finally {

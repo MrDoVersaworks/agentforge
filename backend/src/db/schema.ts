@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, real, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, real, index, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { customType } from 'drizzle-orm/pg-core';
 
@@ -32,6 +32,10 @@ export const users = pgTable('users', {
   gemini_key_iv: varchar('gemini_key_iv', { length: 64 }),
   gemini_key_tag: varchar('gemini_key_tag', { length: 64 }),
   gemini_model: varchar('gemini_model', { length: 100 }).default('gemini-2.5-flash'),
+  encrypted_resend_key: text('encrypted_resend_key'),
+  resend_key_iv: varchar('resend_key_iv', { length: 64 }),
+  resend_key_tag: varchar('resend_key_tag', { length: 64 }),
+  notification_email: varchar('notification_email', { length: 255 }),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -107,6 +111,29 @@ export const messages = pgTable('messages', {
   role: varchar('role', { length: 50 }).notNull(), // 'user' | 'model'
   content: text('content').notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ============================================================
+// TABLE: contact_messages (Hidden Inbox)
+// ============================================================
+export const contactMessages = pgTable('contact_messages', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  sender_name: varchar('sender_name', { length: 255 }).notNull(),
+  sender_email: varchar('sender_email', { length: 255 }).notNull(),
+  message: text('message').notNull(),
+  is_read: boolean('is_read').notNull().default(false),
+  ai_screening_passed: boolean('ai_screening_passed').notNull().default(false),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ============================================================
+// TABLE: system_settings (Global Config)
+// ============================================================
+export const systemSettings = pgTable('system_settings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  google_analytics_id: varchar('google_analytics_id', { length: 50 }),
+  termly_uuid: varchar('termly_uuid', { length: 50 }),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 // ============================================================

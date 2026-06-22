@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { PlatformReviews, Review } from '@/components/PlatformReviews';
+import { UnifiedFooter } from '@/components/UnifiedFooter';
 
 // ================================================================
 // AgentForge — Landing Page
@@ -208,6 +210,12 @@ export default function LandingPage() {
     ['Your Own Data', 'Legal Documents', 'Research Papers', 'Product Docs', 'Knowledge Bases'],
     80, 40, 2000
   );
+
+  const mockReviews: Review[] = [
+    { id: '1', name: 'James Carter', rating: 5, profession: 'AI Engineer', feedback: 'AgentForge allowed us to deploy sovereign chatbots without exposing our intellectual property. The pgvector integration is seamless.' },
+    { id: '2', name: 'Laura Martinez', rating: 5, profession: 'Startup Founder', feedback: 'We built our customer support AI in minutes using our own documents. No vendor lock-in is a game changer.' },
+    { id: '3', name: 'William Chen', rating: 5, profession: 'Data Scientist', feedback: 'The retrieval accuracy using Gemini embeddings is unmatched. A flawless RAG pipeline right out of the box.' }
+  ];
 
   useParticleCanvas(canvasRef);
 
@@ -507,13 +515,15 @@ export default function LandingPage() {
         </div>
       </main>
 
-      {/* ── Footer ── */}
-      <footer className="landing-footer">
-        <p className="landing-footer-line">AgentForge AI Chatbot Builder — Engineered with Next.js &amp; Express.</p>
-        <p className="landing-footer-author">
-          Architected by <span className="landing-footer-accent">Oyewole Favour</span>
-        </p>
-      </footer>
+      <div style={{ position: 'relative', zIndex: 10, backgroundColor: 'rgba(8, 10, 16, 0.4)' }}>
+        <PlatformReviews reviews={mockReviews} />
+      </div>
+
+      <UnifiedFooter 
+        platformName="AgentForge AI Chatbot Builder" 
+        techStack="Next.js & Express"
+        contactLink="https://devpulse.tech"
+      />
 
       <style jsx>{`
         .landing-page {

@@ -15,7 +15,7 @@ export async function generateEmbedding(
     const result = await model.embedContent(text);
     let embedding = result.embedding.values;
 
-    if (!embedding || embedding.length === 0) {
+    if (!embedding ? true : embedding.length === 0) {
       throw new Error('Gemini API returned an empty embedding.');
     }
 
@@ -56,7 +56,7 @@ export async function generateChatResponse(
       : '';
 
     const model = genAI.getGenerativeModel({
-      model: modelName || 'gemini-2.5-flash',
+      model: modelName ? modelName : 'gemini-2.5-flash',
       generationConfig: { temperature },
       systemInstruction: systemPrompt,
     });
@@ -99,7 +99,7 @@ export async function generateChatResponseStream(
       : '';
 
     const model = genAI.getGenerativeModel({
-      model: modelName || 'gemini-2.5-flash',
+      model: modelName ? modelName : 'gemini-2.5-flash',
       generationConfig: { temperature },
       systemInstruction: systemPrompt,
     });

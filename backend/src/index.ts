@@ -12,13 +12,20 @@ import agentRoutes from './routes/agent.routes.js';
 import knowledgeRoutes from './routes/knowledge.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
+import publicRoutes from './routes/public.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import contactRoutes from './routes/contact.routes.js';
 
 const app = express();
 
 // ============================================================
 // SECURITY & CORS
 // ============================================================
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Let the Next.js frontend handle CSP for rendering
+  frameguard: { action: 'deny' }, // Prevent clickjacking
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }, // Strict Transport Security
+}));
 app.use(
   cors({
     origin: config.CORS_ORIGIN.includes(',')
@@ -55,6 +62,9 @@ app.use('/api/agents', agentRoutes);
 app.use('/api/knowledge', knowledgeRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/public', publicRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/contact', contactRoutes);
 
 // ============================================================
 // 404 HANDLER
@@ -74,7 +84,7 @@ app.use(errorHandler);
 // ============================================================
 // START SERVER
 // ============================================================
-const PORT = parseInt(config.PORT, 10) || 5003;
+const PORT = parseInt(config.PORT, 10) ? parseInt(config.PORT, 10) : 5003;
 
 app.listen(PORT, () => {
   logger.info('SERVER', `AgentForge Backend API running on port ${PORT}`);

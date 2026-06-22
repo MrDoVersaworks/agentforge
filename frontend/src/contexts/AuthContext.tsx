@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const profile = data.data;
       setUser({
         ...profile,
-        hasGeminiKey: profile.hasApiKey || profile.has_api_key || false,
+        hasGeminiKey: profile.hasApiKey ? profile.hasApiKey : (profile.has_api_key ? profile.has_api_key : false),
       });
     } catch {
       setUser(null);

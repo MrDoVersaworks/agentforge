@@ -5,9 +5,9 @@ import * as schema from './schema.js';
 
 const { Pool } = pg;
 
-const sslOption = config.DATABASE_URL.includes('sslmode=require') || config.DATABASE_URL.includes('ssl=true')
+const sslOption = config.DATABASE_URL.includes('sslmode=require') 
   ? { rejectUnauthorized: false }
-  : undefined;
+  : config.DATABASE_URL.includes('ssl=true') ? { rejectUnauthorized: false } : undefined;
 
 const pool = new Pool({
   connectionString: config.DATABASE_URL,

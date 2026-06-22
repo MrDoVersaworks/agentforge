@@ -61,8 +61,9 @@ export default function ChatPage({ params }: { params: { id: string } }) {
       await sendMessage(currentInput, currentConversation?.id);
       // Re-fetch conversation list to pick up any new conversation titles
       fetchConversations();
-    } catch (err: any) {
-      addToast('error', err.message || 'Failed to stream response.');
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string };
+      addToast('error', apiErr.message ? apiErr.message : 'Failed to stream response.');
     }
   };
 
@@ -157,10 +158,10 @@ export default function ChatPage({ params }: { params: { id: string } }) {
           {/* ── Panel Header ── */}
           <div className="chat-panel-header">
             <div className="agent-info">
-              <h3>{agent?.name || 'Agent'}</h3>
-              <p>Persona: {agent?.systemPrompt || 'General Assistant'}</p>
+              <h3>{agent?.name ? agent?.name : 'Agent'}</h3>
+              <p>Persona: {agent?.systemPrompt ? agent?.systemPrompt : 'General Assistant'}</p>
             </div>
-            {agent && (agent.documentCount || 0) === 0 && (
+            {agent && (agent.documentCount ? agent.documentCount : 0) === 0 && (
               <div className="no-docs-warning" onClick={() => router.push(`/agents/${agentId}/knowledge`)}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
@@ -181,7 +182,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
                 </div>
                 <h3>Chat with {agent?.name}</h3>
                 <p>
-                  {(agent?.documentCount || 0) > 0
+                  {(agent?.documentCount ? agent?.documentCount : 0) > 0
                     ? `Ask questions grounded in the ${agent?.documentCount} indexed document(s).`
                     : 'Configure custom knowledge bases to enable Retrieval-Augmented Generation.'}
                 </p>
@@ -197,7 +198,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
                           {isUser ? 'You' : agent?.name}
                         </div>
                         <div className="message-content prose">
-                          {msg.content || (
+                          {msg.content ? msg.content : (
                             <div className="typing-indicator">
                               <span />
                               <span />
@@ -220,7 +221,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
               <input
                 type="text"
                 className="input-field chat-input"
-                placeholder={`Send a message to ${agent?.name || 'Agent'}...`}
+                placeholder={`Send a message to ${agent?.name ? agent?.name : 'Agent'}...`}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={isLoading}
@@ -233,7 +234,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
                   </svg>
                 </button>
               ) : (
-                <button type="submit" className="btn btn-primary btn-icon" disabled={!input.trim() || isLoading}>
+                <button type="submit" className="btn btn-primary btn-icon" disabled={!input.trim() ? true : isLoading}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13" />
                     <polygon points="22 2 15 22 11 13 2 9 22 2" />

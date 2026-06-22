@@ -9,9 +9,9 @@ async function runMigrations() {
     // 1. Establish a temporary, separate client to create the extension
     logger.info('DATABASE', 'Checking/enabling pgvector database extension (isolated client)...');
     
-    const sslOption = config.DATABASE_URL.includes('sslmode=require') || config.DATABASE_URL.includes('ssl=true')
+    const sslOption = config.DATABASE_URL.includes('sslmode=require') 
       ? { rejectUnauthorized: false }
-      : undefined;
+      : config.DATABASE_URL.includes('ssl=true') ? { rejectUnauthorized: false } : undefined;
 
     const tempClient = new pg.Client({
       connectionString: config.DATABASE_URL,

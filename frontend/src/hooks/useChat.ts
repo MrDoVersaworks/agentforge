@@ -8,7 +8,7 @@ import type { Conversation, Message } from '@/types';
 // useChat — Conversation management + RAG streaming
 // ================================================================
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5003';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL : 'http://localhost:5003';
 
 export function useChat(agentId: string) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -23,7 +23,7 @@ export function useChat(agentId: string) {
     setIsLoading(true);
     try {
       const { data } = await api.get(`/chat/${agentId}/conversations`);
-      setConversations(data.data || []);
+      setConversations(data.data ? data.data : []);
     } catch {
       setConversations([]);
     } finally {
@@ -39,9 +39,9 @@ export function useChat(agentId: string) {
         const { data } = await api.get(
           `/chat/${agentId}/conversations/${conversationId}/messages`
         );
-        setMessages(data.data || []);
-        const conv = conversations.find((c) => c.id === conversationId) || null;
-        setCurrentConversation(conv);
+        setMessages(data.data ? data.data : []);
+        const found = conversations.find((c) => c.id === conversationId);
+        setCurrentConversation(found ? found : null);
       } catch {
         setMessages([]);
       } finally {
@@ -57,7 +57,7 @@ export function useChat(agentId: string) {
       // Optimistic: add user message immediately
       const tempUserMsg: Message = {
         id: `temp-${Date.now()}`,
-        conversationId: conversationId || '',
+        conversationId: conversationId ? conversationId : '',
         role: 'user',
         content,
         createdAt: new Date().toISOString(),
@@ -72,7 +72,7 @@ export function useChat(agentId: string) {
       const tempModelId = `stream-${Date.now()}`;
       const tempModelMsg: Message = {
         id: tempModelId,
-        conversationId: conversationId || '',
+        conversationId: conversationId ? conversationId : '',
         role: 'model',
         content: '',
         createdAt: new Date().toISOString(),
@@ -111,7 +111,7 @@ export function useChat(agentId: string) {
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
+          buffer = lines.pop() ? lines.pop()! : '';
 
           for (const line of lines) {
             if (line.startsWith('data: ')) {
@@ -134,7 +134,7 @@ export function useChat(agentId: string) {
                     setCurrentConversation({
                       id: parsed.conversationId,
                       agentId,
-                      title: parsed.title || content.slice(0, 50),
+                      title: parsed.title ? parsed.title : content.slice(0, 50),
                       createdAt: new Date().toISOString(),
                     });
                     // Update temp message conversation IDs

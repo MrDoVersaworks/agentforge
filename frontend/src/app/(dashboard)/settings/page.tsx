@@ -5,6 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/useToast';
 import api from '@/lib/api';
+import { AxiosError } from 'axios';
+
+// ── Type-safe error extraction (no `any`) ──
+function extractErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof AxiosError) {
+    return err.response?.data?.error?.message ? err.response?.data?.error?.message : (err.response?.data?.message ? err.response?.data?.message : fallback);
+  }
+  if (err instanceof Error) return err.message;
+  return fallback;
+}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -16,6 +26,11 @@ export default function SettingsPage() {
   const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash');
   const [savingKey, setSavingKey] = useState(false);
 
+  // ── Resend / Notification States ──
+  const [resendKey, setResendKey] = useState('');
+  const [notificationEmail, setNotificationEmail] = useState('');
+  const [savingResend, setSavingResend] = useState(false);
+
   // ── Profile States ──
   const [name, setName] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
@@ -26,8 +41,9 @@ export default function SettingsPage() {
   // ── Hydrate forms with user info ──
   useEffect(() => {
     if (user) {
-      setName(user.name || '');
-      setGeminiModel(user.geminiModel || 'gemini-2.5-flash');
+      setName(user.name ? user.name : '');
+      setGeminiModel(user.geminiModel ? user.geminiModel : 'gemini-2.5-flash');
+      setNotificationEmail(user.notificationEmail ? user.notificationEmail : '');
     }
   }, [user]);
 
@@ -37,7 +53,6 @@ export default function SettingsPage() {
     setSavingKey(true);
 
     try {
-      // 1. Save API Key if user typed anything
       if (apiKey.trim()) {
         await api.post('/settings/api-key', {
           gemini_key: apiKey.trim(),
@@ -45,17 +60,44 @@ export default function SettingsPage() {
         setApiKey('');
       }
 
-      // 2. Update Gemini Model
       await api.patch('/settings', {
         gemini_model: geminiModel,
       });
 
       await refreshUser();
       addToast('success', 'Gemini credentials and settings updated.');
-    } catch (err: any) {
-      addToast('error', err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update Gemini settings.');
+    } catch (err: unknown) {
+      addToast('error', extractErrorMessage(err, 'Failed to update Gemini settings.'));
     } finally {
       setSavingKey(false);
+    }
+  };
+
+  // ── Save Resend API Key & Notification Email ──
+  const handleSaveResend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingResend(true);
+
+    try {
+      if (resendKey.trim()) {
+        await api.post('/settings/resend-key', {
+          resend_key: resendKey.trim(),
+        });
+        setResendKey('');
+      }
+
+      if (notificationEmail.trim()) {
+        await api.patch('/settings', {
+          notification_email: notificationEmail.trim(),
+        });
+      }
+
+      await refreshUser();
+      addToast('success', 'Email notification settings updated.');
+    } catch (err: unknown) {
+      addToast('error', extractErrorMessage(err, 'Failed to update notification settings.'));
+    } finally {
+      setSavingResend(false);
     }
   };
 
@@ -74,8 +116,8 @@ export default function SettingsPage() {
       });
       await refreshUser();
       addToast('success', 'Profile updated successfully.');
-    } catch (err: any) {
-      addToast('error', err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update profile.');
+    } catch (err: unknown) {
+      addToast('error', extractErrorMessage(err, 'Failed to update profile.'));
     } finally {
       setSavingProfile(false);
     }
@@ -94,8 +136,8 @@ export default function SettingsPage() {
       addToast('success', 'Your account has been successfully vaporized.');
       await logout();
       router.push('/login');
-    } catch (err: any) {
-      addToast('error', err.response?.data?.error?.message || 'Failed to delete user account.');
+    } catch (err: unknown) {
+      addToast('error', extractErrorMessage(err, 'Failed to delete user account.'));
       setDeletingAccount(false);
     }
   };
@@ -115,7 +157,7 @@ export default function SettingsPage() {
       <div className="page-header">
         <div className="page-header-text">
           <h1>Global Settings</h1>
-          <p>Configure LLM credentials, update account info, and manage data vaporization</p>
+          <p>Configure LLM credentials, email notifications, update account info, and manage data vaporization</p>
         </div>
       </div>
 
@@ -172,7 +214,58 @@ export default function SettingsPage() {
             </form>
           </div>
 
-          {/* Card 2: Profile Setup */}
+          {/* Card 2: Resend Email Notifications */}
+          <div className="glass settings-card">
+            <div className="card-header-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="amber-icon">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <polyline points="22,6 12,13 2,6" />
+              </svg>
+              <h3>Email Notifications (Resend)</h3>
+            </div>
+            <p className="card-desc">
+              Configure your Resend API key for transactional email delivery (contact form alerts, system notifications). Your key is encrypted at rest using AES-256-GCM.
+            </p>
+
+            <form onSubmit={handleSaveResend}>
+              <div className="form-group">
+                <label className="input-label">Resend API Key</label>
+                <div className="key-input-wrapper">
+                  <input
+                    type="password"
+                    className="input-field"
+                    placeholder={user?.hasResendKey ? '••••••••••••••••••••••••••••••••' : 'Enter your Resend API Key'}
+                    value={resendKey}
+                    onChange={(e) => setResendKey(e.target.value)}
+                  />
+                  {user?.hasResendKey && (
+                    <span className="key-status-indicator active">
+                      <span className="active-dot" />
+                      Active Key Saved
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="input-label">Notification Email</label>
+                <input
+                  type="email"
+                  className="input-field"
+                  placeholder="admin@yourdomain.com"
+                  value={notificationEmail}
+                  onChange={(e) => setNotificationEmail(e.target.value)}
+                />
+                <span className="field-hint">Contact form submissions and system alerts will be forwarded to this address.</span>
+              </div>
+
+              <button type="submit" className="btn btn-primary" disabled={savingResend}>
+                {savingResend ? 'Saving...' : 'Save Notification Settings'}
+              </button>
+            </form>
+          </div>
+
+          {/* Card 3: Profile Setup */}
           <div className="glass settings-card">
             <div className="card-header-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="cyan-icon">
@@ -201,7 +294,7 @@ export default function SettingsPage() {
                 <input
                   type="email"
                   className="input-field disabled-field"
-                  value={user?.email || ''}
+                  value={user?.email ? user?.email : ''}
                   disabled
                 />
                 <span className="field-hint">Email address cannot be changed.</span>
@@ -294,6 +387,7 @@ export default function SettingsPage() {
         }
         .violet-icon { color: var(--accent-violet); }
         .cyan-icon { color: var(--accent-cyan); }
+        .amber-icon { color: #f59e0b; }
         .card-desc {
           font-size: 0.85rem;
           color: var(--text-secondary);

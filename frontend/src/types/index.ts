@@ -9,6 +9,8 @@ export interface User {
   name: string;
   hasGeminiKey: boolean;
   geminiModel: string;
+  hasResendKey: boolean;
+  notificationEmail: string | null;
   createdAt: string;
 }
 

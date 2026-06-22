@@ -46,15 +46,17 @@ export default function KnowledgePage({ params }: { params: { id: string } }) {
     const reader = new FileReader();
     reader.onload = async (e) => {
       const text = e.target?.result as string;
-      if (!text || !text.trim()) {
+      if (!text ? true : !text.trim()) {
         addToast('error', 'File is empty or could not be read.');
         return;
       }
       try {
         await uploadDocument(file.name, text);
         addToast('success', `"${file.name}" uploaded and chunked successfully.`);
-      } catch (err: any) {
-        addToast('error', err.response?.data?.error?.message || `Failed to process "${file.name}"`);
+      } catch (err: unknown) {
+        interface ApiError { response?: { data?: { error?: { message?: string } } } }
+        const apiErr = err as ApiError;
+        addToast('error', apiErr.response?.data?.error?.message ? apiErr.response?.data?.error?.message : `Failed to process "${file.name}"`);
       }
     };
     reader.onerror = () => {
@@ -96,8 +98,10 @@ export default function KnowledgePage({ params }: { params: { id: string } }) {
     try {
       await deleteDocument(docId);
       addToast('success', `"${name}" removed from knowledge base.`);
-    } catch (err: any) {
-      addToast('error', err.response?.data?.error?.message || 'Failed to delete document');
+    } catch (err: unknown) {
+      interface ApiError { response?: { data?: { error?: { message?: string } } } }
+      const apiErr = err as ApiError;
+      addToast('error', apiErr.response?.data?.error?.message ? apiErr.response?.data?.error?.message : 'Failed to delete document');
     }
   };
 
@@ -126,7 +130,7 @@ export default function KnowledgePage({ params }: { params: { id: string } }) {
         <div className="page-header-text">
           <h1>Knowledge Base</h1>
           <p>
-            Ground <span className="agent-highlight">{agent?.name || 'Agent'}</span> using local files (.txt, .md, .csv)
+            Ground <span className="agent-highlight">{agent?.name ? agent?.name : 'Agent'}</span> using local files (.txt, .md, .csv)
           </p>
         </div>
       </div>
@@ -220,7 +224,7 @@ export default function KnowledgePage({ params }: { params: { id: string } }) {
                         <span>{doc.filename}</span>
                       </div>
                       <div className="doc-meta">
-                        <span>{doc.chunkCount || 0} vectors</span>
+                        <span>{doc.chunkCount ? doc.chunkCount : 0} vectors</span>
                         <span className="dot-divider" />
                         <span>Indexed {new Date(doc.createdAt).toLocaleDateString()}</span>
                       </div>

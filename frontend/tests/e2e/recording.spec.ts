@@ -91,6 +91,20 @@ for (const vp of viewports) {
         await expect(page.getByText(/AgentForge/i).first()).toBeVisible();
         await expect(page.getByText(/Build Intelligent AI Agents/i).first()).toBeVisible();
         await autoScroll(page, vp.name);
+
+        const contactBtn = page.locator('button:has-text("Contact"), a:has-text("Contact")').first();
+        if (await contactBtn.isVisible()) {
+            await contactBtn.click();
+            await page.waitForTimeout(1000);
+            await page.locator('input[type="text"]').first().fill(`Observer`);
+            await page.locator('input[type="email"]').first().fill(email);
+            await page.locator('textarea').first().fill('Interested in Sovereign architecture. Please reach out.');
+            const keyInput = page.locator('input[type="password"]');
+            if (await keyInput.isVisible()) await keyInput.fill(SYSTEM_API_KEY);
+            await page.waitForTimeout(1000);
+            await page.locator('form').getByRole('button', { name: /Send/i }).click();
+            await page.waitForTimeout(3000);
+        }
       });
 
       // ─────────────────────────────────────────────
@@ -281,6 +295,22 @@ for (const vp of viewports) {
 
         console.log(`[SOVEREIGN] ${vp.name}: Individual deletions verified.`);
         await page.waitForTimeout(2000);
+
+        // 8c. Admin Inbox Check
+        console.log(`[SOVEREIGN] ${vp.name}: Checking Admin Inbox...`);
+        await page.goto('http://localhost:3003/admin/inbox');
+        await page.waitForTimeout(3000);
+        const markReadBtn = page.locator('button[title="Mark as read"], button:has-text("Mark Read")').first();
+        if (await markReadBtn.isVisible()) {
+            await markReadBtn.click();
+            await page.waitForTimeout(2000);
+        }
+        const purgeMsgBtn = page.locator('button[title="Purge Message"], button:has-text("Purge")').first();
+        if (await purgeMsgBtn.isVisible()) {
+            page.once('dialog', async dialog => dialog.accept());
+            await purgeMsgBtn.click();
+            await page.waitForTimeout(2000);
+        }
       });
 
       // ─────────────────────────────────────────────

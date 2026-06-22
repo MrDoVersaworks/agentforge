@@ -20,7 +20,7 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "drizzle-orm": "^0.30.10",
+    "drizzle-orm": "^0.45.2",
     "express": "^4.19.2",
     "express-rate-limit": "^7.3.1",
     "helmet": "^7.1.0",
@@ -36,7 +36,7 @@
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.12.12",
     "@types/pg": "^8.11.5",
-    "drizzle-kit": "^0.21.4",
+    "drizzle-kit": "^0.18.1",
     "tsx": "^4.11.0",
     "typescript": "^5.4.5"
   }

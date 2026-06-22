@@ -11,7 +11,9 @@ import {
   loginUser,
   refreshAccessToken,
   logoutUser,
+  deleteUserAccount,
 } from '../services/auth.service.js';
+import { jwtBlocklist } from '../utils/blocklist.js';
 
 const router = Router();
 
@@ -22,7 +24,8 @@ router.post(
   validate(registerSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
-      const { email, password, name } = req.body;
+      const body = req.body as { email?: string; password?: string; name?: string };
+      const { email, password, name } = body;
       const result = await registerUser({ email, password, name });
 
       res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, {
@@ -60,7 +63,8 @@ router.post(
   validate(loginSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
-      const { email, password } = req.body;
+      const body = req.body as { email?: string; password?: string };
+      const { email, password } = body;
       const result = await loginUser(email, password);
 
       res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, {
@@ -132,6 +136,17 @@ router.post(
       await logoutUser(refreshToken);
     }
 
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      const token = authHeader.split(' ')[1];
+      if (token) {
+        const signature = token.split('.')[2];
+        if (signature) {
+          jwtBlocklist.add(signature);
+        }
+      }
+    }
+
     res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
 
     res.status(200).json({
@@ -155,6 +170,49 @@ router.get(
       success: true,
       data: profile,
     });
+  })
+);
+
+// DELETE /account
+router.delete(
+  '/account',
+  authMiddleware,
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.id;
+      const body = req.body as { password?: string };
+      const { password } = body;
+
+      // Blocklist the current access token immediately
+      const authHeader = req.headers.authorization;
+      if (authHeader) {
+        const token = authHeader.split(' ')[1];
+        if (token) {
+          const signature = token.split('.')[2];
+          if (signature) {
+            jwtBlocklist.add(signature);
+          }
+        }
+      }
+      
+      await deleteUserAccount(userId, password);
+
+      res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+
+      res.status(200).json({
+        success: true,
+        data: null,
+      });
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes('password')) {
+        res.status(403).json({
+          success: false,
+          error: { code: 'ERR_INVALID_PASSWORD', message: error.message },
+        });
+        return;
+      }
+      throw error;
+    }
   })
 );
 

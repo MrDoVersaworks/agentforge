@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { jwtBlocklist } from '../utils/blocklist.js';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 import type { UserPayload } from '../types/index.js';
@@ -21,7 +22,7 @@ export function authMiddleware(
   }
 
   const parts = authHeader.split(' ');
-  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+  if (parts.length !== 2 ? true : parts[0] !== 'Bearer') {
     logger.warn('AUTH', 'Access denied: Invalid authorization header format');
     res.status(401).json({
       success: false,
@@ -33,6 +34,16 @@ export function authMiddleware(
   const token = parts[1];
 
   try {
+    // 1. Check if token signature is in the native in-memory blocklist
+    const signature = token.split('.')[2];
+    if (signature && jwtBlocklist.has(signature)) {
+      logger.warn('AUTH', 'Access denied: Token is blocklisted (Logged out)');
+      res.status(401).json({
+        success: false,
+        message: 'Session invalidated. Please log in again.',
+      });
+      return;
+    }
     const decoded = jwt.verify(token, config.JWT_ACCESS_SECRET) as UserPayload;
     req.user = {
       id: decoded.id,

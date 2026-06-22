@@ -3,9 +3,9 @@ import { ZodSchema } from 'zod';
 
 type ValidationTarget = 'body' | 'query' | 'params';
 
-export function validate(schema: ZodSchema, target: ValidationTarget = 'body') {
+export function validate<T>(schema: ZodSchema<T>, target: ValidationTarget = 'body') {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const dataToValidate = req[target];
+    const dataToValidate = req[target] as unknown;
     const result = schema.safeParse(dataToValidate);
 
     if (!result.success) {

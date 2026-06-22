@@ -22,7 +22,8 @@ router.post(
   validate(conversationCreateSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const userId = req.user!.id;
-    const { agent_id, title } = req.body;
+    const body = req.body as { agent_id?: string; title?: string };
+    const { agent_id, title } = body;
 
     try {
       const convo = await createConversation(userId, agent_id, title);
@@ -30,10 +31,10 @@ router.post(
         success: true,
         data: { conversation: convo },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(400).json({
         success: false,
-        message: error.message,
+        message: (error as Error).message,
       });
     }
   })
@@ -52,10 +53,10 @@ router.get(
         success: true,
         data: { conversations: convos },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(400).json({
         success: false,
-        message: error.message,
+        message: (error as Error).message,
       });
     }
   })
@@ -74,10 +75,10 @@ router.delete(
         success: true,
         data: null,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(400).json({
         success: false,
-        message: error.message,
+        message: (error as Error).message,
       });
     }
   })
@@ -96,10 +97,10 @@ router.get(
         success: true,
         data: { messages: msgs },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(400).json({
         success: false,
-        message: error.message,
+        message: (error as Error).message,
       });
     }
   })
@@ -112,7 +113,8 @@ router.post(
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const userId = req.user!.id;
     const convoId = req.params.convoId;
-    const { content, stream } = req.body;
+    const body = req.body as { content?: string; stream?: boolean };
+    const { content, stream } = body;
 
     try {
       if (stream) {
@@ -141,14 +143,14 @@ router.post(
           data: { content: response },
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (stream) {
-        res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+        res.write(`data: ${JSON.stringify({ error: (error as Error).message })}\n\n`);
         res.end();
       } else {
         res.status(400).json({
           success: false,
-          message: error.message,
+          message: (error as Error).message,
         });
       }
     }

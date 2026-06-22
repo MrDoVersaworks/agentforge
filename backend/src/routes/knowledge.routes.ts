@@ -18,7 +18,8 @@ router.post(
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const userId = req.user!.id;
     const agentId = req.params.agentId;
-    const { filename, content_text } = req.body;
+    const body = req.body as { filename?: string; content_text?: string };
+    const { filename, content_text } = body;
 
     if (!filename || !content_text) {
       res.status(400).json({
@@ -34,10 +35,10 @@ router.post(
         success: true,
         data: { document },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(400).json({
         success: false,
-        message: error.message,
+        message: (error as Error).message,
       });
     }
   })
@@ -56,10 +57,10 @@ router.get(
         success: true,
         data: { documents },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(400).json({
         success: false,
-        message: error.message,
+        message: (error as Error).message,
       });
     }
   })
@@ -79,10 +80,10 @@ router.delete(
         success: true,
         data: null,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(400).json({
         success: false,
-        message: error.message,
+        message: error instanceof Error ? error.message : 'Failed to delete document',
       });
     }
   })

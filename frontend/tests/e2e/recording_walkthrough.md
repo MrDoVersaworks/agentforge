@@ -28,9 +28,13 @@ graph TD
 * **Objective:** Verify the premium landing page layout, responsive design, and branding copy.
 * **Mechanism:** Checks for key elements like `"AgentForge"` and `"Build Autonomous AI Agents"`. Triggers a smooth scroll to showcase CSS animations and neural constellation effects, then scrolls back to the top.
 
-### 2. Identity Registration
-* **Objective:** Initialize a secure workspace session.
-* **Mechanism:** Generates timestamped credentials (`demo_${timestamp}_viewport@forge.test`) to prevent database collisions, fills in fields `#register-name`, `#register-email`, `#register-password`, `#register-confirm`, and clicks **Create Account**. Verifies redirect to `/dashboard`.
+### 2. User Registration
+* **Objective:** Establish an isolated tenant context.
+* **Mechanism:** Generates a randomized `demo_${timestamp}_viewport@forge.test` identity, ensuring collision-free runs.
+
+### 2b. Contact & Inbox Form Demo
+* **Objective:** Verify the public contact gateway and AI screening.
+* **Payload:** Submits a test inquiry with the Sovereign API key for BYOK-enabled AI screening., fills in fields `#register-name`, `#register-email`, `#register-password`, `#register-confirm`, and clicks **Create Account**. Verifies redirect to `/dashboard`.
 
 ### 3. Theme Toggle — Light & Dark Mode
 * **Objective:** Validate the Sovereign Theme & Contrast Architecture (U8).

@@ -105,7 +105,7 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
       email: newUser.email,
       name: newUser.name,
       has_api_key: false,
-      gemini_model: newUser.gemini_model || DEFAULT_GEMINI_MODEL,
+      gemini_model: newUser.gemini_model ? newUser.gemini_model : DEFAULT_GEMINI_MODEL,
     },
   };
 }
@@ -172,7 +172,7 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
       email: user.email,
       name: user.name,
       has_api_key: !!user.encrypted_gemini_key,
-      gemini_model: user.gemini_model || DEFAULT_GEMINI_MODEL,
+      gemini_model: user.gemini_model ? user.gemini_model : DEFAULT_GEMINI_MODEL,
     },
   };
 }
@@ -238,4 +238,30 @@ export async function logoutUser(refreshTokenValue: string): Promise<void> {
   const tokenId = refreshTokenValue.substring(0, dotIndex);
   await db.delete(refreshTokens).where(eq(refreshTokens.id, tokenId));
   logger.info('AUTH', `Successfully invalidated session refresh token ID: ${tokenId}`);
+}
+
+export async function deleteUserAccount(userId: string, password?: string): Promise<void> {
+  const userRows = await db
+    .select({ id: users.id, password_hash: users.password_hash })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (userRows.length === 0) {
+    throw new Error('User account not found.');
+  }
+
+  const user = userRows[0];
+  
+  if (password) {
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    if (!isValid) {
+      throw new Error('Invalid password. Account deletion aborted.');
+    }
+  } else {
+    throw new Error('Password is required for account deletion.');
+  }
+
+  await db.delete(users).where(eq(users.id, userId));
+  logger.info('AUTH', `Account deleted for user: ${userId}.`);
 }

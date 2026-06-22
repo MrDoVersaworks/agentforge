@@ -24,7 +24,7 @@ export async function createConversation(userId: string, agentId: string, title:
     .values({
       agent_id: agentId,
       user_id: userId,
-      title: title || 'New Conversation',
+      title: title ? title : 'New Conversation',
     })
     .returning();
 
@@ -113,7 +113,13 @@ export async function queryRAGAndRespond(
 
   const convo = convoRows[0];
 
-  if (!convo.encrypted_gemini_key || !convo.gemini_key_iv || !convo.gemini_key_tag) {
+  if (!convo.encrypted_gemini_key) {
+    throw new Error('Please configure your Gemini API Key in Settings first.');
+  }
+  if (!convo.gemini_key_iv) {
+    throw new Error('Please configure your Gemini API Key in Settings first.');
+  }
+  if (!convo.gemini_key_tag) {
     throw new Error('Please configure your Gemini API Key in Settings first.');
   }
 
@@ -150,7 +156,8 @@ export async function queryRAGAndRespond(
     );
 
     if (results.rows && Array.isArray(results.rows)) {
-      contextChunks = results.rows.map((row: any) => String(row.chunk_text));
+      interface KnowledgeRow { chunk_text: string }
+      contextChunks = results.rows.map((row: unknown) => String((row as KnowledgeRow).chunk_text));
       logger.info('CHAT', `Retrieved ${contextChunks.length} relevant context chunks.`);
     }
   } catch (vectorError) {
@@ -181,7 +188,7 @@ export async function queryRAGAndRespond(
     // 5a. Streaming generation
     aiResponse = await generateChatResponseStream(
       geminiKey,
-      convo.gemini_model || 'gemini-2.5-flash',
+      convo.gemini_model ? convo.gemini_model : 'gemini-2.5-flash',
       convo.system_prompt,
       convo.temperature,
       chatHistory,
@@ -193,7 +200,7 @@ export async function queryRAGAndRespond(
     // 5b. Non-streaming generation
     aiResponse = await generateChatResponse(
       geminiKey,
-      convo.gemini_model || 'gemini-2.5-flash',
+      convo.gemini_model ? convo.gemini_model : 'gemini-2.5-flash',
       convo.system_prompt,
       convo.temperature,
       chatHistory,

@@ -17,7 +17,7 @@ export function useKnowledge(agentId: string) {
     setIsLoading(true);
     try {
       const { data } = await api.get(`/knowledge/${agentId}/documents`);
-      setDocuments(data.data || []);
+      setDocuments(data.data ? data.data : []);
     } catch {
       setDocuments([]);
     } finally {

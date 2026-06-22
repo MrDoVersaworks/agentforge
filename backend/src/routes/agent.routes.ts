@@ -3,6 +3,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { agentCreateSchema, agentUpdateSchema } from '../types/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { cacheMiddleware, invalidateCache } from '../utils/cache.js';
 import {
   createAgent,
   getAgents,
@@ -22,9 +23,14 @@ router.post(
   validate(agentCreateSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const userId = req.user!.id;
-    const { name, system_prompt, temperature } = req.body;
+    const body = req.body as { name: string; system_prompt: string; temperature: number };
+    const { name, system_prompt, temperature } = body;
 
     const agent = await createAgent(userId, { name, system_prompt, temperature });
+    
+    // Invalidate agents cache for this user
+    invalidateCache('/api/agents', userId);
+
     res.status(201).json({
       success: true,
       data: { agent },
@@ -35,6 +41,7 @@ router.post(
 // GET /api/agents
 router.get(
   '/',
+  cacheMiddleware(60),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const userId = req.user!.id;
     const agents = await getAgents(userId);
@@ -49,6 +56,7 @@ router.get(
 // GET /api/agents/:id
 router.get(
   '/:id',
+  cacheMiddleware(60),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const userId = req.user!.id;
     const agentId = req.params.id;
@@ -78,15 +86,20 @@ router.patch(
     const agentId = req.params.id;
 
     try {
-      const agent = await updateAgent(userId, agentId, req.body);
+      const body = req.body as { name?: string; system_prompt?: string; temperature?: number };
+      const agent = await updateAgent(userId, agentId, body);
+
+      // Invalidate agents cache for this user
+      invalidateCache('/api/agents', userId);
+
       res.status(200).json({
         success: true,
         data: { agent },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(404).json({
         success: false,
-        message: error.message,
+        message: (error as Error).message,
       });
     }
   })
@@ -101,14 +114,18 @@ router.delete(
 
     try {
       await deleteAgent(userId, agentId);
+
+      // Invalidate agents cache for this user
+      invalidateCache('/api/agents', userId);
+
       res.status(200).json({
         success: true,
         data: null,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(404).json({
         success: false,
-        message: error.message,
+        message: (error as Error).message,
       });
     }
   })

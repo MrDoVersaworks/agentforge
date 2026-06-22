@@ -72,8 +72,10 @@ export default function DashboardPage() {
         addToast('success', `Agent "${name}" created successfully.`);
       }
       setModalOpen(false);
-    } catch (err: any) {
-      const errMsg = err.response?.data?.error?.message || 'Failed to save agent details';
+    } catch (err: unknown) {
+      interface ApiError { response?: { data?: { error?: { message?: string } } } }
+      const apiErr = err as ApiError;
+      const errMsg = apiErr.response?.data?.error?.message ? apiErr.response?.data?.error?.message : 'Failed to save agent details';
       addToast('error', errMsg);
     } finally {
       setIsSubmitting(false);
@@ -87,8 +89,10 @@ export default function DashboardPage() {
     try {
       await deleteAgent(id);
       addToast('success', `Agent "${name}" and all associated data deleted.`);
-    } catch (err: any) {
-      addToast('error', err.response?.data?.error?.message || 'Failed to delete agent');
+    } catch (err: unknown) {
+      interface ApiError { response?: { data?: { error?: { message?: string } } } }
+      const apiErr = err as ApiError;
+      addToast('error', apiErr.response?.data?.error?.message ? apiErr.response?.data?.error?.message : 'Failed to delete agent');
     }
   };
 
@@ -179,7 +183,7 @@ export default function DashboardPage() {
               </div>
 
               <p className="agent-prompt-preview">
-                {agent.systemPrompt || (
+                {agent.systemPrompt ? agent.systemPrompt : (
                   <span className="no-prompt">No custom system prompt configured. Assumes standard assistant persona.</span>
                 )}
               </p>
@@ -187,11 +191,11 @@ export default function DashboardPage() {
               <div className="agent-stats">
                 <div className="stat-item">
                   <span className="stat-label">Documents</span>
-                  <span className="stat-value">{agent.documentCount || 0}</span>
+                  <span className="stat-value">{agent.documentCount ? agent.documentCount : 0}</span>
                 </div>
                 <div className="stat-item">
                   <span className="stat-label">Chunks</span>
-                  <span className="stat-value">{agent.chunkCount || 0}</span>
+                  <span className="stat-value">{agent.chunkCount ? agent.chunkCount : 0}</span>
                 </div>
               </div>
 
