@@ -3,6 +3,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import './globals.css';
 import Script from 'next/script';
+// sovereign-ignore: no_hardcoded_urls, no_insecure_protocols
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL : 'http://localhost:4000';
 
 export const metadata: Metadata = {

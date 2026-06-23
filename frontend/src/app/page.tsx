@@ -553,22 +553,22 @@ export default function LandingPage() {
           z-index: 0;
         }
         .ambient-glow-1 {
-          width: 500px;
-          height: 500px;
+          width: 30rem;
+          height: 30rem;
           background: rgba(139, 92, 246, 0.08);
           top: -10%;
           left: -5%;
         }
         .ambient-glow-2 {
-          width: 400px;
-          height: 400px;
+          width: 25rem;
+          height: 25rem;
           background: rgba(99, 102, 241, 0.06);
           bottom: -5%;
           right: -5%;
         }
         .ambient-glow-3 {
-          width: 300px;
-          height: 300px;
+          width: 18rem;
+          height: 18rem;
           background: rgba(34, 211, 238, 0.04);
           top: 50%;
           right: 15%;

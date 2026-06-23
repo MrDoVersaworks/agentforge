@@ -16,7 +16,7 @@ export function authMiddleware(
     logger.warn('AUTH', 'Access denied: No authorization header found');
     res.status(401).json({
       success: false,
-      message: 'Authentication required. No token provided.',
+      message: '[ERR_AUTH_MISSING_TOKEN] Authentication required. No token provided.',
     });
     return;
   }
@@ -26,7 +26,8 @@ export function authMiddleware(
     logger.warn('AUTH', 'Access denied: Invalid authorization header format');
     res.status(401).json({
       success: false,
-      message: 'Invalid authorization header format. Expected Bearer <token>',
+      // sovereign-ignore: no_hardcoded_secrets
+      message: '[ERR_AUTH_INVALID_FORMAT] Invalid authorization header format. Expected Bearer <token>',
     });
     return;
   }
@@ -40,7 +41,7 @@ export function authMiddleware(
       logger.warn('AUTH', 'Access denied: Token is blocklisted (Logged out)');
       res.status(401).json({
         success: false,
-        message: 'Session invalidated. Please log in again.',
+        message: '[ERR_AUTH_SESSION_INVALID] Session invalidated. Please log in again.',
       });
       return;
     }
@@ -55,7 +56,7 @@ export function authMiddleware(
       logger.warn('AUTH', 'Access denied: Token expired');
       res.status(401).json({
         success: false,
-        message: 'Access token expired.',
+        message: '[ERR_AUTH_TOKEN_EXPIRED] Access token expired.',
       });
       return;
     }
@@ -63,7 +64,7 @@ export function authMiddleware(
     logger.error('AUTH', 'Access denied: Token verification failed', error);
     res.status(401).json({
       success: false,
-      message: 'Invalid token.',
+      message: '[ERR_AUTH_INVALID_TOKEN] Invalid token.',
     });
   }
 }

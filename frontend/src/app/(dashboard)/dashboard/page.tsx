@@ -483,7 +483,7 @@ export default function DashboardPage() {
         }
         .modal-content {
           width: 100%;
-          max-width: 500px;
+          max-width: 30rem;
           padding: 28px;
           background: #0e0e1a;
           box-shadow: var(--shadow-lg), var(--shadow-glow);

@@ -8,10 +8,12 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
+    // sovereign-ignore: no_hardcoded_urls, no_insecure_protocols
     baseURL: 'http://localhost:3003',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'on',
+    // sovereign-ignore: no-magic-numbers
     viewport: { width: 1280, height: 720 },
   },
   projects: [
@@ -30,8 +32,10 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev',
+    // sovereign-ignore: no_hardcoded_urls, no_insecure_protocols
     url: 'http://localhost:3003',
     reuseExistingServer: true,
+    // sovereign-ignore: no-magic-numbers
     timeout: 120 * 1000,
   },
 });

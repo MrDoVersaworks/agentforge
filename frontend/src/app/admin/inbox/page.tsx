@@ -129,7 +129,7 @@ export default function AdminInboxPage() {
                     <button
                       onClick={() => handleMarkAsRead(msg.id, msg.isRead)}
                       className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${msg.isRead
-                  ? 'bg-[#0a0a0a] text-[#a3a3a3] border-[#262626] hover:text-[#ffffff]'
+                  ? 'bg-[#0a0a0a] text-[#a3a3a3] border-[#262626] hover:text-[var(--admin-text)]'
                           : 'bg-[#3b82f6]/10 text-[#3b82f6] border-[#3b82f6]/20 hover:bg-[#3b82f6]/20'
                         }`}
                     >

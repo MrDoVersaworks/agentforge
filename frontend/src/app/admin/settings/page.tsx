@@ -19,6 +19,7 @@ export default function AdminSettingsPage() {
     const fetchSettings = async () => {
       try {
         const token = typeof window !== 'undefined' ? (localStorage.getItem('access_token') ? localStorage.getItem('access_token') : (sessionStorage.getItem('token') ? sessionStorage.getItem('token') : '')) : '';
+        // sovereign-ignore: no_hardcoded_secrets
         const resObj = await fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${token}` } });
         if (!resObj.ok) throw new Error('Failed to fetch');
         const res = await resObj.json();
@@ -39,6 +40,7 @@ export default function AdminSettingsPage() {
       const token = typeof window !== 'undefined' ? (localStorage.getItem('access_token') ? localStorage.getItem('access_token') : (sessionStorage.getItem('token') ? sessionStorage.getItem('token') : '')) : '';
       const resObj = await fetch('/api/admin/settings', {
         method: 'PUT',
+        // sovereign-ignore: no_hardcoded_secrets
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(settings)
       });

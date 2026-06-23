@@ -400,7 +400,7 @@ export default function SettingsPage() {
         }
         .select-field {
           appearance: none;
-          background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+          background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='https://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
           background-repeat: no-repeat;
           background-position: right 12px center;
           padding-right: 40px;

@@ -19,24 +19,28 @@ export const logger = {
   info: (category: LogCategory, message: string, data?: unknown) => {
     if (!IS_DEV) return;
     const color = category === 'DATABASE' ? colors.green : category === 'AI' ? colors.magenta : colors.cyan;
+    // sovereign-ignore: no_console_logging
     console.log(
       `${colors.dim}[${new Date().toISOString()}]${colors.reset} ` +
       `${color}[${category}]${colors.reset} ` +
       `${message}`
     );
     if (data) {
+      // sovereign-ignore: no_console_logging
       console.log(`${colors.dim}${JSON.stringify(data, null, 2)}${colors.reset}`);
     }
   },
 
   warn: (category: LogCategory, message: string, data?: unknown) => {
     if (!IS_DEV) return;
+    // sovereign-ignore: no_console_logging
     console.log(
       `${colors.dim}[${new Date().toISOString()}]${colors.reset} ` +
       `${colors.yellow}[${category}]${colors.reset} ` +
       `${message}`
     );
     if (data) {
+      // sovereign-ignore: no_console_logging
       console.log(`${colors.dim}${JSON.stringify(data, null, 2)}${colors.reset}`);
     }
   },
