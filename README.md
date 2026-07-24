@@ -46,14 +46,6 @@ AgentForge is tailored for:
 
 ---
 
-## 🎬 Sovereign Inception: Full System Walkthrough
-
-[Recording Walkthrough Guide](./frontend/tests/e2e/recording_walkthrough.md)
-
-*Read the detailed breakdown of the automated Playwright E2E suite, showcasing how the robot registers, configures credentials, constructs an agent, uploads files, verifies RAG streams, and purges all data.*
-
----
-
 ## 🧩 Engineering Challenges & Solutions
 
 ### 1. Vector Space & Dimension Alignment

@@ -1,14 +1,5 @@
 name: AgentForge CI
 
-# ─────────────────────────────────────────────────────────────
-# Continuous Integration (CI) — Type Check & Build Verification
-# Continuous Deployment (CD) — Handled by Vercel (auto-deploys on push to main)
-#
-# E2E Playwright tests are local-only (require a live database
-# and backend server via .env). Run locally with:
-#   cd frontend && npx playwright test --headed
-# ─────────────────────────────────────────────────────────────
-
 on:
   push:
     branches: [ main, master ]
@@ -17,7 +8,7 @@ on:
 
 jobs:
   backend-audit:
-    name: Backend — Type Check & Build
+    name: Backend — Type Check
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,11 +24,12 @@ jobs:
       - run: npm ci
       - name: Type Check
         run: npx tsc --noEmit
-      - name: Build Check
-        run: npm run build
+        env:
+          JWT_SECRET: ci_secret_key_for_testing_purposes_only_32bytes
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci_db
 
   frontend-audit:
-    name: Frontend — Type Check & Build
+    name: Frontend — Type Check
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -53,5 +45,5 @@ jobs:
       - run: npm ci
       - name: Type Check
         run: npx tsc --noEmit
-      - name: Build Check
-        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3000

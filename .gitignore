@@ -32,3 +32,10 @@ Thumbs.db
 EHthumbs.db
 Desktop.ini
 .DS_Store
+
+# Temporary Media & Recording Exclusions
+videos/
+*.mp4
+*.webm
+recording_walkthrough.md
+
