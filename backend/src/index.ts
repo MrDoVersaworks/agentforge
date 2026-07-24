@@ -18,19 +18,24 @@ import contactRoutes from './routes/contact.routes.js';
 
 const app = express();
 
+let corsOrigin: string | string[];
+if (config.CORS_ORIGIN.includes(',')) {
+  corsOrigin = config.CORS_ORIGIN.split(',').map((origin) => origin.trim());
+} else {
+  corsOrigin = config.CORS_ORIGIN;
+}
+
 // ============================================================
 // SECURITY & CORS
 // ============================================================
 app.use(helmet({
-  contentSecurityPolicy: false, // Let the Next.js frontend handle CSP for rendering
-  frameguard: { action: 'deny' }, // Prevent clickjacking
-  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }, // Strict Transport Security
+  contentSecurityPolicy: false,
+  frameguard: { action: 'deny' },
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
 }));
 app.use(
   cors({
-    origin: config.CORS_ORIGIN.includes(',')
-      ? config.CORS_ORIGIN.split(',').map((o) => o.trim())
-      : config.CORS_ORIGIN,
+    origin: corsOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -72,7 +77,7 @@ app.use('/api/contact', contactRoutes);
 app.use((_req, res) => {
   res.status(404).json({
     success: false,
-    message: 'The requested API endpoint does not exist.',
+    message: '[ERR_ROUTE_NOT_FOUND] The requested API endpoint does not exist.',
   });
 });
 
@@ -84,12 +89,10 @@ app.use(errorHandler);
 // ============================================================
 // START SERVER
 // ============================================================
-const PORT = parseInt(config.PORT, 10) ? parseInt(config.PORT, 10) : 5003;
-
-app.listen(PORT, () => {
-  logger.info('SERVER', `AgentForge Backend API running on port ${PORT}`);
-  logger.info('SERVER', `Mode: ${config.NODE_ENV}`);
-  logger.info('SERVER', `Configured CORS origin: ${config.CORS_ORIGIN}`);
+app.listen(config.PORT, () => {
+  logger.info('SERVER', 'AgentForge Backend API running on port ' + config.PORT);
+  logger.info('SERVER', 'Mode: ' + config.NODE_ENV);
+  logger.info('SERVER', 'Configured CORS origin: ' + config.CORS_ORIGIN);
 });
 
 export default app;

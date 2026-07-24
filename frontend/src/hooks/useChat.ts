@@ -8,8 +8,10 @@ import type { Conversation, Message } from '@/types';
 // useChat — Conversation management + RAG streaming
 // ================================================================
 
-// sovereign-ignore: no_hardcoded_urls, no_insecure_protocols
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL : 'http://localhost:5003';
+if (!process.env.NEXT_PUBLIC_API_URL) {
+  console.warn('[WARN] NEXT_PUBLIC_API_URL is not defined in the environment.');
+}
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 export function useChat(agentId: string) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -86,7 +88,6 @@ export function useChat(agentId: string) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            // sovereign-ignore: no_hardcoded_secrets
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           credentials: 'include',

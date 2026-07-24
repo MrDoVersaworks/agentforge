@@ -6,8 +6,10 @@ import axios from 'axios';
 // All env access flows through this single module.
 // ================================================================
 
-// sovereign-ignore: no_hardcoded_urls, no_insecure_protocols
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL : 'http://localhost:5003';
+if (!process.env.NEXT_PUBLIC_API_URL) {
+  console.warn('[WARN] NEXT_PUBLIC_API_URL is not defined in the environment.');
+}
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -28,11 +30,10 @@ export function getAccessToken(): string | null {
   return accessToken;
 }
 
-// ── Request Interceptor: Attach Bearer Token ──
+// ── Request Interceptor: Attach Auth Token ──
 api.interceptors.request.use(
   (config) => {
     if (accessToken) {
-      // sovereign-ignore: no_hardcoded_secrets
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
     return config;
@@ -75,7 +76,6 @@ api.interceptors.response.use(
         return new Promise((resolve, reject) => {
           failedQueue.push({
             resolve: (token: string) => {
-              // sovereign-ignore: no_hardcoded_secrets
               originalRequest.headers.Authorization = `Bearer ${token}`;
               resolve(api(originalRequest));
             },
@@ -100,7 +100,6 @@ api.interceptors.response.use(
         setAccessToken(newToken);
         processQueue(null, newToken);
 
-        // sovereign-ignore: no_hardcoded_secrets
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api(originalRequest);
       } catch (refreshError) {

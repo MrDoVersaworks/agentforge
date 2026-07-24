@@ -21,15 +21,15 @@ export default function KnowledgePage({ params }: { params: { id: string } }) {
   useEffect(() => {
     const fetchAgent = async () => {
       try {
-        const { data } = await api.get(`/agents/${agentId}`);
-        setAgent(data.data);
+        const response = await api.get<{ data: Agent }>(`/agents/${agentId}`);
+        setAgent(response.data.data);
       } catch {
         addToast('error', 'Failed to retrieve agent details.');
         router.push('/dashboard');
       }
     };
-    fetchAgent();
-    fetchDocuments();
+    void fetchAgent();
+    void fetchDocuments();
   }, [agentId, fetchDocuments, router, addToast]);
 
   // ── File reader helper ──
@@ -231,7 +231,7 @@ export default function KnowledgePage({ params }: { params: { id: string } }) {
                     </div>
                     <button
                       className="btn-delete-doc"
-                      onClick={() => handleDelete(doc.id, doc.filename)}
+                      onClick={() => { void handleDelete(doc.id, doc.filename); }}
                       title="Delete document"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

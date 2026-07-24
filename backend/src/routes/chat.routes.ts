@@ -21,8 +21,8 @@ router.post(
   '/conversations',
   validate(conversationCreateSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user!.id;
-    const body = req.body as { agent_id?: string; title?: string };
+    const userId = req.user?.id as string;
+    const body = req.body as { agent_id: string; title?: string };
     const { agent_id, title } = body;
 
     try {
@@ -44,7 +44,7 @@ router.post(
 router.get(
   '/conversations/:agentId',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user!.id;
+    const userId = req.user?.id as string;
     const agentId = req.params.agentId;
 
     try {
@@ -62,11 +62,10 @@ router.get(
   })
 );
 
-// DELETE /api/chat/conversations/:convoId
 router.delete(
   '/conversations/:convoId',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user!.id;
+    const userId = req.user?.id as string;
     const convoId = req.params.convoId;
 
     try {
@@ -88,7 +87,7 @@ router.delete(
 router.get(
   '/conversations/:convoId/messages',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user!.id;
+    const userId = req.user?.id as string;
     const convoId = req.params.convoId;
 
     try {
@@ -111,9 +110,9 @@ router.post(
   '/conversations/:convoId/messages',
   validate(messageSendSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user!.id;
+    const userId = req.user?.id as string;
     const convoId = req.params.convoId;
-    const body = req.body as { content?: string; stream?: boolean };
+    const body = req.body as { content: string; stream?: boolean };
     const { content, stream } = body;
 
     try {

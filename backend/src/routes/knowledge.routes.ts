@@ -1,91 +1,65 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
+import type { Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
+import { validate } from '../middleware/validate.js';
+import { knowledgeDocumentSchema } from '../types/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { requireUserId } from '../utils/requestIdentity.js';
 import {
   addDocument,
-  getDocuments,
   deleteDocument,
+  getDocuments,
 } from '../services/knowledge.service.js';
 
 const router = Router();
 
-// Secure all knowledge routes
 router.use(authMiddleware);
 
-// POST /api/knowledge/:agentId/documents
 router.post(
   '/:agentId/documents',
+  validate(knowledgeDocumentSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user!.id;
-    const agentId = req.params.agentId;
-    const body = req.body as { filename?: string; content_text?: string };
-    const { filename, content_text } = body;
+    const userId = requireUserId(req);
+    const body = req.body as { filename: string; content_text: string };
+    const document = await addDocument(
+      userId,
+      req.params.agentId,
+      {
+        filename: body.filename,
+        contentText: body.content_text,
+      }
+    );
 
-    if (!filename || !content_text) {
-      res.status(400).json({
-        success: false,
-        message: 'Filename and content_text are required.',
-      });
-      return;
-    }
-
-    try {
-      const document = await addDocument(userId, agentId, { filename, contentText: content_text });
-      res.status(201).json({
-        success: true,
-        data: { document },
-      });
-    } catch (error: unknown) {
-      res.status(400).json({
-        success: false,
-        message: (error as Error).message,
-      });
-    }
+    res.status(201).json({
+      success: true,
+      data: { document },
+    });
   })
 );
 
-// GET /api/knowledge/:agentId/documents
 router.get(
   '/:agentId/documents',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user!.id;
-    const agentId = req.params.agentId;
+    const userId = requireUserId(req);
+    const documents = await getDocuments(userId, req.params.agentId);
 
-    try {
-      const documents = await getDocuments(userId, agentId);
-      res.status(200).json({
-        success: true,
-        data: { documents },
-      });
-    } catch (error: unknown) {
-      res.status(400).json({
-        success: false,
-        message: (error as Error).message,
-      });
-    }
+    res.status(200).json({
+      success: true,
+      data: { documents },
+    });
   })
 );
 
-// DELETE /api/knowledge/:agentId/documents/:docId
 router.delete(
   '/:agentId/documents/:docId',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user!.id;
-    const agentId = req.params.agentId;
-    const docId = req.params.docId;
+    const userId = requireUserId(req);
+    await deleteDocument(userId, req.params.agentId, req.params.docId);
 
-    try {
-      await deleteDocument(userId, agentId, docId);
-      res.status(200).json({
-        success: true,
-        data: null,
-      });
-    } catch (error: unknown) {
-      res.status(400).json({
-        success: false,
-        message: error instanceof Error ? error.message : 'Failed to delete document',
-      });
-    }
+    res.status(200).json({
+      success: true,
+      data: null,
+    });
   })
 );
 

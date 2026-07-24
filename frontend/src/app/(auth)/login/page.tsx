@@ -57,7 +57,7 @@ export default function LoginPage() {
           </div>
 
           {/* ── Form ── */}
-          <form className="auth-form" onSubmit={handleSubmit}>
+          <form className="auth-form" onSubmit={(e) => { void handleSubmit(e); }}>
             {error && <div className="auth-error">{error}</div>}
 
             <div className="auth-field">

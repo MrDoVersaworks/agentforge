@@ -1,6 +1,5 @@
-import { pgTable, uuid, varchar, text, timestamp, real, index, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, real, index, boolean, customType } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { customType } from 'drizzle-orm/pg-core';
 
 // ============================================================
 // pgvector Custom Type (768 Dimensions for text-embedding-004)
@@ -14,7 +13,7 @@ export const pgVector768 = customType<{ data: number[]; driverData: string }>({
   },
   fromDriver(value: string): number[] {
     return value
-      .replace(/[\[\]]/g, '')
+      .replace(/\[|\]/g, '')
       .split(',')
       .map((v) => parseFloat(v));
   },
@@ -55,12 +54,14 @@ export const refreshTokens = pgTable('refresh_tokens', {
 // ============================================================
 // TABLE: agents
 // ============================================================
+const DEFAULT_TEMPERATURE = 0.7;
+
 export const agents = pgTable('agents', {
   id: uuid('id').defaultRandom().primaryKey(),
   user_id: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
   system_prompt: text('system_prompt').notNull(),
-  temperature: real('temperature').notNull().default(0.7),
+  temperature: real('temperature').notNull().default(DEFAULT_TEMPERATURE),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -74,6 +75,7 @@ export const knowledgeDocuments = pgTable('knowledge_documents', {
   filename: varchar('filename', { length: 255 }).notNull(),
   content_text: text('content_text').notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 // ============================================================
@@ -86,6 +88,7 @@ export const knowledgeChunks = pgTable('knowledge_chunks', {
   chunk_text: text('chunk_text').notNull(),
   embedding: pgVector768('embedding').notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   agentIdx: index('kc_agent_id_idx').on(table.agent_id),
   documentIdx: index('kc_document_id_idx').on(table.document_id),
@@ -100,6 +103,7 @@ export const conversations = pgTable('conversations', {
   user_id: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   title: varchar('title', { length: 255 }).notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 // ============================================================
@@ -111,6 +115,7 @@ export const messages = pgTable('messages', {
   role: varchar('role', { length: 50 }).notNull(), // 'user' | 'model'
   content: text('content').notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 // ============================================================
@@ -124,6 +129,7 @@ export const contactMessages = pgTable('contact_messages', {
   is_read: boolean('is_read').notNull().default(false),
   ai_screening_passed: boolean('ai_screening_passed').notNull().default(false),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 // ============================================================
@@ -133,6 +139,7 @@ export const systemSettings = pgTable('system_settings', {
   id: uuid('id').defaultRandom().primaryKey(),
   google_analytics_id: varchar('google_analytics_id', { length: 50 }),
   termly_uuid: varchar('termly_uuid', { length: 50 }),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

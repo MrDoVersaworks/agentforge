@@ -1,120 +1,162 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
+import type { Request, Response } from 'express';
+import { count, desc, eq, sql } from 'drizzle-orm';
+import { z } from 'zod';
+import {
+  ADMIN_INBOX_DEFAULT_PAGE_SIZE,
+  ADMIN_INBOX_MAX_PAGE_SIZE,
+  ADMIN_SETTING_VALUE_MAX_LENGTH,
+} from '../config/constants.js';
 import { db } from '../db/connection.js';
 import { contactMessages, systemSettings } from '../db/schema.js';
-import { eq, desc } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { ownerMiddleware } from '../middleware/owner.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 
 const router = Router();
 
-// Protect all admin routes
+const paginationSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(ADMIN_INBOX_MAX_PAGE_SIZE)
+    .default(ADMIN_INBOX_DEFAULT_PAGE_SIZE),
+});
+
+const settingsSchema = z.object({
+  google_analytics_id: z.string().trim().max(ADMIN_SETTING_VALUE_MAX_LENGTH).nullable().optional(),
+  termly_uuid: z.string().trim().max(ADMIN_SETTING_VALUE_MAX_LENGTH).nullable().optional(),
+});
+
 router.use(authMiddleware);
+router.use(ownerMiddleware);
 
-// Optional: You could add a requireOwner middleware here if you have roles
+router.get(
+  '/inbox',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const pagination = paginationSchema.parse(req.query);
+    const offset = (pagination.page - 1) * pagination.limit;
 
-// GET /api/admin/inbox - Retrieve all messages
-router.get('/inbox', async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const messages = await db
-      .select()
-      .from(contactMessages)
-      .orderBy(desc(contactMessages.created_at));
+    const [messages, totals] = await Promise.all([
+      db
+        .select()
+        .from(contactMessages)
+        .orderBy(desc(contactMessages.created_at))
+        .limit(pagination.limit)
+        .offset(offset),
+      db.select({ total: count() }).from(contactMessages).limit(1),
+    ]);
 
+    if (totals.length === 0) {
+      throw new AppError('[ERR_ADMIN_INBOX_COUNT_MISSING] Inbox count query returned no result.', 500);
+    }
+
+    const total = totals[0].total;
     res.status(200).json({
       success: true,
       data: messages,
+      pagination: {
+        page: pagination.page,
+        limit: pagination.limit,
+        total,
+        totalPages: Math.ceil(total / pagination.limit),
+      },
     });
-  } catch (error) {
-    next(error);
-  }
-});
+  })
+);
 
-// PATCH /api/admin/inbox/:id/read - Mark message as read
-router.patch('/inbox/:id/read', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const { id } = req.params;
-
+router.patch(
+  '/inbox/:id/read',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const [updated] = await db
       .update(contactMessages)
-      .set({ is_read: true })
-      .where(eq(contactMessages.id, id))
+      .set({
+        is_read: true,
+        updated_at: sql.raw('CURRENT_TIMESTAMP'),
+      })
+      .where(eq(contactMessages.id, req.params.id))
       .returning();
 
-    if (!updated) {
-      next(new AppError('Message not found', 404));
-      return;
+    if (updated === undefined) {
+      throw new AppError('[ERR_ADMIN_MESSAGE_NOT_FOUND] Message not found.', 404);
     }
 
     res.status(200).json({
       success: true,
       data: updated,
     });
-  } catch (error) {
-    next(error);
-  }
-});
+  })
+);
 
-// DELETE /api/admin/inbox/:id - Delete message
-router.delete('/inbox/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const { id } = req.params;
-
+router.delete(
+  '/inbox/:id',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const [deleted] = await db
       .delete(contactMessages)
-      .where(eq(contactMessages.id, id))
-      .returning();
+      .where(eq(contactMessages.id, req.params.id))
+      .returning({ id: contactMessages.id });
 
-    if (!deleted) {
-      next(new AppError('Message not found', 404));
-      return;
+    if (deleted === undefined) {
+      throw new AppError('[ERR_ADMIN_MESSAGE_NOT_FOUND] Message not found.', 404);
     }
 
     res.status(200).json({
       success: true,
       data: null,
     });
-  } catch (error) {
-    next(error);
-  }
-});
+  })
+);
 
-
-// ============================================================
-// GLOBAL SETTINGS (Legal & Analytics)
-// ============================================================
-router.get('/settings', async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-        const settingsArray = await db.select().from(systemSettings).limit(1);
-    const settings = settingsArray[0] ? settingsArray[0] : { google_analytics_id: '', termly_uuid: '' };
-    res.status(200).json({ success: true, data: settings });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.put('/settings', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const body = req.body as { google_analytics_id?: string; termly_uuid?: string };
-    const { google_analytics_id, termly_uuid } = body;
-    const settingsArray = await db.select().from(systemSettings).limit(1);
-    
-    let updated: typeof systemSettings.$inferSelect | undefined;
-    if (settingsArray.length > 0) {
-      [updated] = await db.update(systemSettings)
-        .set({ google_analytics_id: google_analytics_id ? google_analytics_id : null, termly_uuid: termly_uuid ? termly_uuid : null, updated_at: new Date() })
-        .where(eq(systemSettings.id, settingsArray[0].id))
-        .returning();
+router.get(
+  '/settings',
+  asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+    const settings = await db.select().from(systemSettings).limit(1);
+    let settingsData: typeof systemSettings.$inferSelect | null;
+    if (settings.length === 0) {
+      settingsData = null;
     } else {
-      [updated] = await db.insert(systemSettings)
-        .values({ google_analytics_id: google_analytics_id ? google_analytics_id : null, termly_uuid: termly_uuid ? termly_uuid : null })
+      settingsData = settings[0];
+    }
+
+    res.status(200).json({
+      success: true,
+      data: settingsData,
+    });
+  })
+);
+
+router.put(
+  '/settings',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const input = settingsSchema.parse(req.body);
+    const existing = await db.select({ id: systemSettings.id }).from(systemSettings).limit(1);
+
+    let updated: typeof systemSettings.$inferSelect | undefined;
+    if (existing.length === 0) {
+      [updated] = await db.insert(systemSettings).values(input).returning();
+    } else {
+      [updated] = await db
+        .update(systemSettings)
+        .set({
+          ...input,
+          updated_at: sql.raw('CURRENT_TIMESTAMP'),
+        })
+        .where(eq(systemSettings.id, existing[0].id))
         .returning();
     }
 
-    res.status(200).json({ success: true, data: updated });
-  } catch (error) {
-    next(error);
-  }
-});
+    if (updated === undefined) {
+      throw new AppError('[ERR_ADMIN_SETTINGS_UPDATE_FAILED] Global settings update failed.', 500);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: updated,
+    });
+  })
+);
 
 export default router;
-

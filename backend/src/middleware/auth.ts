@@ -1,70 +1,95 @@
-import { Request, Response, NextFunction } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { jwtBlocklist } from '../utils/blocklist.js';
+import { z } from 'zod';
 import { config } from '../config/index.js';
+import { jwtBlocklist } from '../utils/blocklist.js';
 import { logger } from '../utils/logger.js';
-import type { UserPayload } from '../types/index.js';
+
+const userPayloadSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+});
+
+function rejectAuthentication(
+  res: Response,
+  message: string
+): void {
+  res.status(401).json({
+    success: false,
+    message,
+  });
+}
+
+function requireBearerToken(req: Request, res: Response): string | null {
+  const authHeader = req.headers.authorization;
+  if (authHeader === undefined) {
+    logger.warn('AUTH', 'Access denied: No authorization header found');
+    rejectAuthentication(
+      res,
+      '[ERR_AUTH_MISSING_TOKEN] Authentication required. No token provided.'
+    );
+    return null;
+  }
+
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer' || parts[1].length === 0) {
+    logger.warn('AUTH', 'Access denied: Invalid authorization header format');
+    rejectAuthentication(
+      res,
+      '[ERR_AUTH_INVALID_FORMAT] Invalid authorization header format. Expected Bearer <token>.'
+    );
+    return null;
+  }
+
+  return parts[1];
+}
+
+function isTokenBlocklisted(token: string): boolean {
+  const signature = token.split('.')[2];
+  if (signature === undefined || signature.length === 0) {
+    return false;
+  }
+
+  return jwtBlocklist.has(signature);
+}
 
 export function authMiddleware(
   req: Request,
   res: Response,
   next: NextFunction
 ): void {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    logger.warn('AUTH', 'Access denied: No authorization header found');
-    res.status(401).json({
-      success: false,
-      message: '[ERR_AUTH_MISSING_TOKEN] Authentication required. No token provided.',
-    });
+  const token = requireBearerToken(req, res);
+  if (token === null) {
     return;
   }
 
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2 ? true : parts[0] !== 'Bearer') {
-    logger.warn('AUTH', 'Access denied: Invalid authorization header format');
-    res.status(401).json({
-      success: false,
-      // sovereign-ignore: no_hardcoded_secrets
-      message: '[ERR_AUTH_INVALID_FORMAT] Invalid authorization header format. Expected Bearer <token>',
-    });
+  if (isTokenBlocklisted(token)) {
+    logger.warn('AUTH', 'Access denied: Token is blocklisted');
+    rejectAuthentication(
+      res,
+      '[ERR_AUTH_SESSION_INVALID] Session invalidated. Please log in again.'
+    );
     return;
   }
-
-  const token = parts[1];
 
   try {
-    // 1. Check if token signature is in the native in-memory blocklist
-    const signature = token.split('.')[2];
-    if (signature && jwtBlocklist.has(signature)) {
-      logger.warn('AUTH', 'Access denied: Token is blocklisted (Logged out)');
-      res.status(401).json({
-        success: false,
-        message: '[ERR_AUTH_SESSION_INVALID] Session invalidated. Please log in again.',
-      });
-      return;
-    }
-    const decoded = jwt.verify(token, config.JWT_ACCESS_SECRET) as UserPayload;
-    req.user = {
-      id: decoded.id,
-      email: decoded.email,
-    };
+    const decoded = jwt.verify(token, config.JWT_ACCESS_SECRET);
+    req.user = userPayloadSchema.parse(decoded);
     next();
   } catch (error: unknown) {
     if (error instanceof jwt.TokenExpiredError) {
       logger.warn('AUTH', 'Access denied: Token expired');
-      res.status(401).json({
-        success: false,
-        message: '[ERR_AUTH_TOKEN_EXPIRED] Access token expired.',
-      });
+      rejectAuthentication(
+        res,
+        '[ERR_AUTH_TOKEN_EXPIRED] Access token expired.'
+      );
       return;
     }
 
     logger.error('AUTH', 'Access denied: Token verification failed', error);
-    res.status(401).json({
-      success: false,
-      message: '[ERR_AUTH_INVALID_TOKEN] Invalid token.',
-    });
+    rejectAuthentication(
+      res,
+      '[ERR_AUTH_INVALID_TOKEN] Invalid token.'
+    );
   }
 }

@@ -1,12 +1,13 @@
 import { rateLimit } from 'express-rate-limit';
-
-const AUTH_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-const AUTH_MAX_REQUESTS = 20;
-const API_WINDOW_MS = 60 * 1000; // 1 minute
-const API_MAX_REQUESTS = 120;
+import {
+  API_MAX_REQUESTS,
+  API_RATE_LIMIT_WINDOW_MS,
+  AUTH_MAX_REQUESTS,
+  AUTH_RATE_LIMIT_WINDOW_MS,
+} from '../config/constants.js';
 
 export const authRateLimiter = rateLimit({
-  windowMs: AUTH_WINDOW_MS,
+  windowMs: AUTH_RATE_LIMIT_WINDOW_MS,
   max: AUTH_MAX_REQUESTS,
   standardHeaders: true,
   legacyHeaders: false,
@@ -17,7 +18,7 @@ export const authRateLimiter = rateLimit({
 });
 
 export const apiRateLimiter = rateLimit({
-  windowMs: API_WINDOW_MS,
+  windowMs: API_RATE_LIMIT_WINDOW_MS,
   max: API_MAX_REQUESTS,
   standardHeaders: true,
   legacyHeaders: false,

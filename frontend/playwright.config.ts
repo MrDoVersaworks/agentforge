@@ -1,4 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
+import { PLAYWRIGHT_TIMEOUT_MS, PLAYWRIGHT_VIEWPORT } from './src/constants/playwright';
+
+let PLAYWRIGHT_BASE_URL = 'http://localhost:3003';
+if (process.env.PLAYWRIGHT_BASE_URL !== undefined && process.env.PLAYWRIGHT_BASE_URL.trim() !== '') {
+  PLAYWRIGHT_BASE_URL = process.env.PLAYWRIGHT_BASE_URL.trim();
+}
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -8,13 +14,11 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    // sovereign-ignore: no_hardcoded_urls, no_insecure_protocols
-    baseURL: 'http://localhost:3003',
+    baseURL: PLAYWRIGHT_BASE_URL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'on',
-    // sovereign-ignore: no-magic-numbers
-    viewport: { width: 1280, height: 720 },
+    viewport: PLAYWRIGHT_VIEWPORT,
   },
   projects: [
     {
@@ -32,10 +36,8 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev',
-    // sovereign-ignore: no_hardcoded_urls, no_insecure_protocols
-    url: 'http://localhost:3003',
+    url: PLAYWRIGHT_BASE_URL,
     reuseExistingServer: true,
-    // sovereign-ignore: no-magic-numbers
-    timeout: 120 * 1000,
+    timeout: PLAYWRIGHT_TIMEOUT_MS,
   },
 });

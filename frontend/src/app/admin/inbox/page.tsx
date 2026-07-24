@@ -83,7 +83,6 @@ export default function AdminInboxPage() {
             <input
               type="text"
               placeholder="Search messages..."
-              placeholder="Search messages..."
             className="bg-transparent border-none outline-none text-sm w-48 text-[var(--admin-text)] placeholder-[#a3a3a3]"
             />
           </div>

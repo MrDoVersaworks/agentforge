@@ -34,15 +34,15 @@ export default function ChatPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     const fetchAgent = async () => {
       try {
-        const { data } = await api.get(`/agents/${agentId}`);
-        setAgent(data.data);
+        const response = await api.get<{ data: Agent }>(`/agents/${agentId}`);
+        setAgent(response.data.data);
       } catch {
         addToast('error', 'Failed to retrieve agent details.');
         router.push('/dashboard');
       }
     };
-    fetchAgent();
-    fetchConversations();
+    void fetchAgent();
+    void fetchConversations();
   }, [agentId, fetchConversations, router, addToast]);
 
   // ── Auto Scroll ──
@@ -139,7 +139,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
                     <span className="conv-title">{conv.title}</span>
                     <button
                       className="btn-delete-conv"
-                      onClick={(e) => handleDeleteConv(e, conv.id, conv.title)}
+                      onClick={(e) => { void handleDeleteConv(e, conv.id, conv.title); }}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3 6 5 6 21 6" />
@@ -217,7 +217,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
 
           {/* ── Input Box ── */}
           <div className="chat-input-bar">
-            <form onSubmit={handleSend} className="chat-form">
+            <form onSubmit={(e) => { void handleSend(e); }} className="chat-form">
               <input
                 type="text"
                 className="input-field chat-input"

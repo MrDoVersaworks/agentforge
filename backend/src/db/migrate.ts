@@ -38,5 +38,8 @@ async function runMigrations() {
   }
 }
 
-runMigrations();
+runMigrations().catch((error) => {
+  logger.error('ERROR', 'Unhandled error during migration execution', error);
+  process.exit(1);
+});
 

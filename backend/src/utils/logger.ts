@@ -19,40 +19,36 @@ export const logger = {
   info: (category: LogCategory, message: string, data?: unknown) => {
     if (!IS_DEV) return;
     const color = category === 'DATABASE' ? colors.green : category === 'AI' ? colors.magenta : colors.cyan;
-    // sovereign-ignore: no_console_logging
-    console.log(
+    process.stdout.write(
       `${colors.dim}[${new Date().toISOString()}]${colors.reset} ` +
       `${color}[${category}]${colors.reset} ` +
-      `${message}`
+      `${message}\n`
     );
     if (data) {
-      // sovereign-ignore: no_console_logging
-      console.log(`${colors.dim}${JSON.stringify(data, null, 2)}${colors.reset}`);
+      process.stdout.write(`${colors.dim}${JSON.stringify(data, null, 2)}${colors.reset}\n`);
     }
   },
 
   warn: (category: LogCategory, message: string, data?: unknown) => {
     if (!IS_DEV) return;
-    // sovereign-ignore: no_console_logging
-    console.log(
+    process.stdout.write(
       `${colors.dim}[${new Date().toISOString()}]${colors.reset} ` +
       `${colors.yellow}[${category}]${colors.reset} ` +
-      `${message}`
+      `${message}\n`
     );
     if (data) {
-      // sovereign-ignore: no_console_logging
-      console.log(`${colors.dim}${JSON.stringify(data, null, 2)}${colors.reset}`);
+      process.stdout.write(`${colors.dim}${JSON.stringify(data, null, 2)}${colors.reset}\n`);
     }
   },
 
   error: (category: LogCategory, message: string, error?: unknown) => {
-    console.error(
+    process.stderr.write(
       `${colors.dim}[${new Date().toISOString()}]${colors.reset} ` +
       `${colors.red}[${category}]${colors.reset} ` +
-      `${colors.red}${message}${colors.reset}`
+      `${colors.red}${message}${colors.reset}\n`
     );
     if (error) {
-      console.error(`${colors.red}${error instanceof Error ? error.stack : JSON.stringify(error, null, 2)}${colors.reset}`);
+      process.stderr.write(`${colors.red}${error instanceof Error ? error.stack : JSON.stringify(error, null, 2)}${colors.reset}\n`);
     }
   },
 };

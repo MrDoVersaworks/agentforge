@@ -34,6 +34,18 @@ AgentForge is tailored for:
 
 ---
 
+## 📸 Interface & User Experience
+
+| Landing Page | Authentication Portal |
+|:---:|:---:|
+| ![Landing Page](./frontend/public/screenshots/landing.png) | ![Login Screen](./frontend/public/screenshots/login.png) |
+
+| Account Registration |
+|:---:|
+| ![Register Screen](./frontend/public/screenshots/register.png) |
+
+---
+
 ## 🎬 Sovereign Inception: Full System Walkthrough
 
 [Recording Walkthrough Guide](./frontend/tests/e2e/recording_walkthrough.md)

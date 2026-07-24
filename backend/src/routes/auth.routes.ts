@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { authRateLimiter } from '../middleware/rateLimiter.js';
 import { validate } from '../middleware/validate.js';
-import { registerSchema, loginSchema } from '../types/index.js';
+import { deleteAccountSchema, loginSchema, registerSchema } from '../types/index.js';
 import { config } from '../config/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { REFRESH_COOKIE_NAME, REFRESH_TOKEN_EXPIRY_DAYS } from '../constants/index.js';
@@ -24,7 +24,7 @@ router.post(
   validate(registerSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
-      const body = req.body as { email?: string; password?: string; name?: string };
+      const body = req.body as { email: string; password: string; name: string };
       const { email, password, name } = body;
       const result = await registerUser({ email, password, name });
 
@@ -45,7 +45,7 @@ router.post(
       });
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes('already exists')) {
-        res.status(409).json({
+        res.status(400).json({
           success: false,
           error: { code: 'ERR_USER_EXISTS', message: error.message },
         });
@@ -63,7 +63,7 @@ router.post(
   validate(loginSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
-      const body = req.body as { email?: string; password?: string };
+      const body = req.body as { email: string; password: string };
       const { email, password } = body;
       const result = await loginUser(email, password);
 
@@ -100,7 +100,7 @@ router.post(
   '/refresh',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
-      const refreshToken = req.cookies[REFRESH_COOKIE_NAME];
+      const refreshToken = req.cookies[REFRESH_COOKIE_NAME] as string | undefined;
 
       if (!refreshToken) {
         res.status(401).json({
@@ -116,7 +116,7 @@ router.post(
         success: true,
         data: { accessToken },
       });
-    } catch (error: unknown) {
+    } catch {
       res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
       res.status(401).json({
         success: false,
@@ -130,7 +130,7 @@ router.post(
 router.post(
   '/logout',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const refreshToken = req.cookies[REFRESH_COOKIE_NAME];
+    const refreshToken = req.cookies[REFRESH_COOKIE_NAME] as string | undefined;
 
     if (refreshToken) {
       await logoutUser(refreshToken);
@@ -161,7 +161,7 @@ router.get(
   '/profile',
   authMiddleware,
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user!.id;
+    const userId = req.user?.id as string;
     // Import getSettings inline to avoid circular dependency
     const { getSettings } = await import('../services/settings.service.js');
     const profile = await getSettings(userId);
@@ -173,14 +173,15 @@ router.get(
   })
 );
 
-// DELETE /account
+
 router.delete(
   '/account',
   authMiddleware,
+  validate(deleteAccountSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = req.user!.id;
-      const body = req.body as { password?: string };
+      const userId = req.user?.id as string;
+      const body = req.body as { password: string };
       const { password } = body;
 
       // Blocklist the current access token immediately

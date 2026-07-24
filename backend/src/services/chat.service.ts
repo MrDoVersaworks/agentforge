@@ -5,7 +5,7 @@ import { decrypt } from './crypto.service.js';
 import { generateEmbedding, generateChatResponse, generateChatResponseStream } from './gemini.service.js';
 import { logger } from '../utils/logger.js';
 
-export async function createConversation(userId: string, agentId: string, title: string) {
+export async function createConversation(userId: string, agentId: string, title?: string) {
   logger.info('DATABASE', `Creating conversation for agent: ${agentId} by user: ${userId}`);
 
   // Verify agent ownership

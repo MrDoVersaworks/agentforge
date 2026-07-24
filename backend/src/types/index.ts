@@ -1,15 +1,19 @@
 import { z } from 'zod';
+import {
+  KNOWLEDGE_CONTENT_MAX_LENGTH,
+  KNOWLEDGE_FILENAME_MAX_LENGTH,
+} from '../config/constants.js';
+
+const DEFAULT_TEMPERATURE = 0.7;
 
 export interface UserPayload {
   id: string;
   email: string;
 }
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: UserPayload;
-    }
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: UserPayload;
   }
 }
 
@@ -23,6 +27,10 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
+});
+
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, 'Password is required for account deletion'),
 });
 
 export const geminiKeySchema = z.object({
@@ -43,7 +51,7 @@ export const resendKeySchema = z.object({
 export const agentCreateSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   system_prompt: z.string().min(1, 'System prompt is required'),
-  temperature: z.number().min(0).max(2).default(0.7),
+  temperature: z.number().min(0).max(2).default(DEFAULT_TEMPERATURE),
 });
 
 export const agentUpdateSchema = z.object({
@@ -61,4 +69,16 @@ export const conversationCreateSchema = z.object({
 export const messageSendSchema = z.object({
   content: z.string().min(1, 'Message content is required'),
   stream: z.boolean().default(false),
+});
+export const knowledgeDocumentSchema = z.object({
+  filename: z
+    .string()
+    .trim()
+    .min(1, 'Filename is required')
+    .max(KNOWLEDGE_FILENAME_MAX_LENGTH),
+  content_text: z
+    .string()
+    .trim()
+    .min(1, 'Document content is required')
+    .max(KNOWLEDGE_CONTENT_MAX_LENGTH),
 });

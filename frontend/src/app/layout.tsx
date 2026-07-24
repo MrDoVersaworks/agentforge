@@ -3,8 +3,10 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import './globals.css';
 import Script from 'next/script';
-// sovereign-ignore: no_hardcoded_urls, no_insecure_protocols
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL : 'http://localhost:4000';
+if (!process.env.NEXT_PUBLIC_API_URL) {
+  console.warn('[WARN] NEXT_PUBLIC_API_URL is not defined in the environment.');
+}
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 export const metadata: Metadata = {
   title: 'AgentForge — AI Chatbot Builder with RAG',
