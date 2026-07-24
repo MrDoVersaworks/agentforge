@@ -28,7 +28,7 @@ if (config.CORS_ORIGIN.includes(',')) {
 // ============================================================
 // SECURITY & CORS
 // ============================================================
-app.use(helmet({
+app.use((helmet as any)({
   contentSecurityPolicy: false,
   frameguard: { action: 'deny' },
   hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
