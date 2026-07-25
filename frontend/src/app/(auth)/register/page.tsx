@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 
 // ================================================================
@@ -15,12 +16,18 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [termsAgreed, setTermsAgreed] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!termsAgreed) {
+      setError('You must agree to the Terms of Service and Privacy Policy to proceed.');
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
@@ -129,10 +136,51 @@ export default function RegisterPage() {
               />
             </div>
 
+            {/* Terms & Conditions Agreement Section */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '0.75rem', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                <input
+                  id="terms-checkbox-af"
+                  type="checkbox"
+                  checked={termsAgreed}
+                  onChange={(e) => setTermsAgreed(e.target.checked)}
+                  style={{ marginTop: '0.2rem', cursor: 'pointer' }}
+                />
+                <label htmlFor="terms-checkbox-af" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4, cursor: 'pointer' }}>
+                  I agree to the{' '}
+                  <Link href="/terms" target="_blank" style={{ color: '#8b5cf6', textDecoration: 'underline' }}>
+                    Terms of Service
+                  </Link>{' '}
+                  and{' '}
+                  <Link href="/privacy" target="_blank" style={{ color: '#8b5cf6', textDecoration: 'underline' }}>
+                    Privacy Policy
+                  </Link>.
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <button
+                  type="button"
+                  onClick={() => setTermsAgreed(true)}
+                  style={{ flex: 1, padding: '0.35rem', borderRadius: '0.5rem', border: 'none', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', background: termsAgreed ? 'rgba(139, 92, 246, 0.2)' : 'rgba(255,255,255,0.05)', color: termsAgreed ? '#a78bfa' : '#94a3b8' }}
+                >
+                  {termsAgreed ? '✓ Terms Agreed' : 'I Agree'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTermsAgreed(false)}
+                  style={{ flex: 1, padding: '0.35rem', borderRadius: '0.5rem', border: 'none', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', background: !termsAgreed ? 'rgba(244, 63, 94, 0.2)' : 'rgba(255,255,255,0.05)', color: !termsAgreed ? '#fb7185' : '#94a3b8' }}
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
+
             <button
               type="submit"
               className="btn btn-primary auth-submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !termsAgreed}
+              style={{ opacity: !termsAgreed ? 0.5 : 1, cursor: !termsAgreed ? 'not-allowed' : 'pointer' }}
             >
               {isSubmitting ? <span className="spinner" /> : 'Create Account'}
             </button>
