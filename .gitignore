@@ -39,3 +39,4 @@ videos/
 *.webm
 recording_walkthrough.md
 
+.env.production
