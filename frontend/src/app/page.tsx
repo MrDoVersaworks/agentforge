@@ -522,7 +522,7 @@ export default function LandingPage() {
       <UnifiedFooter 
         platformName="AgentForge AI Chatbot Builder" 
         techStack="Next.js & Express"
-        contactLink="https://devpulse.tech"
+        contactLink="https://devpulse-igt5.vercel.app"
       />
 
       <style jsx>{`
