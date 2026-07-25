@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-
+import { PlatformReviews } from '@/components/PlatformReviews';
 import { UnifiedFooter } from '@/components/UnifiedFooter';
 
 // ================================================================
@@ -510,7 +510,9 @@ export default function LandingPage() {
         </div>
       </main>
 
-
+      <div style={{ position: 'relative', zIndex: 10, backgroundColor: 'rgba(8, 10, 16, 0.4)' }}>
+        <PlatformReviews />
+      </div>
 
       <UnifiedFooter 
         platformName="AgentForge AI Chatbot Builder" 
