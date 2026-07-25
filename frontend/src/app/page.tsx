@@ -516,13 +516,13 @@ export default function LandingPage() {
       </main>
 
       <div style={{ position: 'relative', zIndex: 10, backgroundColor: 'rgba(8, 10, 16, 0.4)' }}>
-        <PlatformReviews reviews={mockReviews} />
+        <PlatformReviews />
       </div>
 
       <UnifiedFooter 
         platformName="AgentForge AI Chatbot Builder" 
         techStack="Next.js & Express"
-        contactLink="https://devpulse-igt5.vercel.app"
+        contactLink="https://devpulse-zeta-six.vercel.app/"
       />
 
       <style jsx>{`
