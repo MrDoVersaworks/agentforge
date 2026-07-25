@@ -9,7 +9,7 @@ import axios from 'axios';
 if (!process.env.NEXT_PUBLIC_API_URL) {
   console.warn('[WARN] NEXT_PUBLIC_API_URL is not defined in the environment.');
 }
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
 
 const api = axios.create({
   baseURL: API_BASE_URL,

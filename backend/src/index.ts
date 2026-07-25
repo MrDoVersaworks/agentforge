@@ -20,9 +20,9 @@ const app = express();
 
 let corsOrigin: string | string[];
 if (config.CORS_ORIGIN.includes(',')) {
-  corsOrigin = config.CORS_ORIGIN.split(',').map((origin) => origin.trim());
+  corsOrigin = config.CORS_ORIGIN.split(',').map((origin) => origin.trim().replace(/\/+$/, ''));
 } else {
-  corsOrigin = config.CORS_ORIGIN;
+  corsOrigin = config.CORS_ORIGIN.trim().replace(/\/+$/, '');
 }
 
 // ============================================================
