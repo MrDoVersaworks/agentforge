@@ -17,8 +17,8 @@ export function ownerMiddleware(
     });
     return;
   }
-
-  if (authenticatedEmail.toLowerCase() !== config.ADMIN_EMAIL.toLowerCase()) {
+  const adminEmail = config.ADMIN_EMAIL || '';
+  if (authenticatedEmail.toLowerCase() !== adminEmail.toLowerCase()) {
     res.status(403).json({
       success: false,
       error: {
