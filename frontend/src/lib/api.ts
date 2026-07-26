@@ -9,7 +9,8 @@ import axios from 'axios';
 if (!process.env.NEXT_PUBLIC_API_URL) {
   console.warn('[WARN] NEXT_PUBLIC_API_URL is not defined in the environment.');
 }
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
+const rawUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5003').replace(/\/+$/, '');
+const API_BASE_URL = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl}/api`;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
