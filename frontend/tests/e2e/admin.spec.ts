@@ -1,21 +1,53 @@
 import { test, expect } from '@playwright/test';
-import path from 'path';
-import fs from 'fs';
 
-test.describe('AgentForge Settings & Admin', () => {
-  test('settings page and admin inbox inspection', async ({ page }) => {
-    test.setTimeout(60000);
-    const screenshotDir = path.resolve(__dirname, '../../public/screenshots');
-    if (!fs.existsSync(screenshotDir)) fs.mkdirSync(screenshotDir, { recursive: true });
+const BACKEND_URL = 'http://localhost:5003';
+const FRONTEND_URL = 'http://localhost:3003';
 
-    // 1. Settings View
-    await page.goto('http://localhost:3003/settings', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotDir, 'settings.png') });
+test.describe('AgentForge — Admin & Infrastructure Controls', () => {
+  /* ---- Admin UI Page Renders ---- */
+  test('admin inbox UI page renders', async ({ page }) => {
+    await page.goto(`${FRONTEND_URL}/admin/inbox`);
+    await expect(page.locator('body')).toBeVisible();
+  });
 
-    // 2. Admin Inbox View
-    await page.goto('http://localhost:3003/admin/inbox', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotDir, 'admin_inbox.png') });
+  test('admin settings UI page renders', async ({ page }) => {
+    await page.goto(`${FRONTEND_URL}/admin/settings`);
+    await expect(page.locator('body')).toBeVisible();
+  });
+
+  /* ---- Admin API Endpoint Protection ---- */
+  test('GET /admin/inbox rejects unauthenticated access', async ({ request }) => {
+    const res = await request.get(`${BACKEND_URL}/api/admin/inbox`);
+    expect(res.status()).toBe(401);
+  });
+
+  test('PATCH /admin/inbox/:id/read rejects unauthenticated access', async ({ request }) => {
+    const res = await request.patch(`${BACKEND_URL}/api/admin/inbox/fake-id/read`);
+    expect(res.status()).toBe(401);
+  });
+
+  test('DELETE /admin/inbox/:id rejects unauthenticated access', async ({ request }) => {
+    const res = await request.delete(`${BACKEND_URL}/api/admin/inbox/fake-id`);
+    expect(res.status()).toBe(401);
+  });
+
+  test('GET /admin/settings rejects unauthenticated access', async ({ request }) => {
+    const res = await request.get(`${BACKEND_URL}/api/admin/settings`);
+    expect(res.status()).toBe(401);
+  });
+
+  test('PUT /admin/settings rejects unauthenticated access', async ({ request }) => {
+    const res = await request.put(`${BACKEND_URL}/api/admin/settings`, { data: {} });
+    expect(res.status()).toBe(401);
+  });
+
+  test('GET /admin/reviews rejects unauthenticated access', async ({ request }) => {
+    const res = await request.get(`${BACKEND_URL}/api/admin/reviews`);
+    expect(res.status()).toBe(401);
+  });
+
+  test('DELETE /admin/reviews/:id rejects unauthenticated access', async ({ request }) => {
+    const res = await request.delete(`${BACKEND_URL}/api/admin/reviews/fake-id`);
+    expect(res.status()).toBe(401);
   });
 });

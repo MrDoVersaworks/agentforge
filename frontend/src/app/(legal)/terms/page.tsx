@@ -1,39 +1,68 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+
+interface LegalDoc {
+  title: string;
+  content: string;
+  version: string;
+  updatedAt: string;
+}
+
 export default function TermsOfServicePage() {
+  const [doc, setDoc] = useState<LegalDoc | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchTermsOfService() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/v1/public/legal/terms_of_service`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data) {
+            setDoc(json.data);
+          }
+        }
+      } catch (_err) {
+        // Fallback silently if offline or API unavailable
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTermsOfService();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#04071a] text-[#94a3b8] p-8 pt-24">
       <div className="max-w-4xl mx-auto py-12 space-y-8">
-        <h1 className="text-4xl font-bold mb-8 text-white">Terms of Service</h1>
-        <p className="text-sm text-[#64748b]">Last updated: July 2026</p>
+        <h1 className="text-4xl font-bold mb-8 text-white">
+          {doc ? doc.title : 'Terms of Service'}
+        </h1>
+        <p className="text-sm text-[#64748b]">
+          Version: {doc ? doc.version : '1.0.0'} &bull; Last updated: {doc ? new Date(doc.updatedAt).toLocaleDateString() : 'July 2026'}
+        </p>
 
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold text-white">1. Acceptance of Terms</h2>
-          <p>By accessing or using AgentForge, you agree to be bound by these Terms of Service. If you do not agree, you may not use the platform.</p>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold text-white">2. Account Responsibilities</h2>
-          <p>You are responsible for maintaining the security of your account credentials and API keys. You must not share your password or allow unauthorized access to your account.</p>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold text-white">3. AI & Knowledge Base Usage</h2>
-          <p>AgentForge provides AI agent creation and RAG capabilities as a portfolio demonstration. AI-generated responses are not guaranteed to be accurate and should not be relied upon for critical decisions without verification.</p>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold text-white">4. Intellectual Property</h2>
-          <p>You retain all rights to data, documents, and content you upload to AgentForge. The AgentForge platform, its design, code, and branding are the intellectual property of the developer.</p>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold text-white">5. Limitation of Liability</h2>
-          <p>AgentForge is provided &quot;as is&quot; without warranties of any kind. In no event shall the developer be liable for any indirect, incidental, or consequential damages arising from your use of the platform.</p>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold text-white">6. Contact</h2>
-          <p>For questions about these terms, please use the contact form on our portfolio site at <a href="https://devpulse-igt5.vercel.app" className="text-[#8b5cf6] hover:underline">devpulse-igt5.vercel.app</a>.</p>
-        </section>
+        {loading ? (
+          <div className="text-center py-12 text-slate-500">Loading document...</div>
+        ) : doc ? (
+          <div
+            className="prose prose-invert max-w-none space-y-4"
+            dangerouslySetInnerHTML={{ __html: doc.content }}
+          />
+        ) : (
+          <div className="space-y-6">
+            <section className="space-y-4">
+              <h2 className="text-2xl font-semibold text-white">1. Acceptance of Terms</h2>
+              <p>By accessing or using AgentForge, you agree to be bound by these Terms of Service.</p>
+            </section>
+            <section className="space-y-4">
+              <h2 className="text-2xl font-semibold text-white">2. Agent Behaviors & AI Outputs</h2>
+              <p>You are responsible for system prompts and knowledge documents supplied to custom AI agents created on AgentForge.</p>
+            </section>
+          </div>
+        )}
       </div>
     </div>
   );

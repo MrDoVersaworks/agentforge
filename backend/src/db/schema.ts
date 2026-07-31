@@ -139,6 +139,21 @@ export const systemSettings = pgTable('system_settings', {
   id: uuid('id').defaultRandom().primaryKey(),
   google_analytics_id: varchar('google_analytics_id', { length: 50 }),
   termly_uuid: varchar('termly_uuid', { length: 50 }),
+  privacy_policy_content: text('privacy_policy_content'),
+  terms_of_service_content: text('terms_of_service_content'),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ============================================================
+// TABLE: platform_reviews (Global Customer Testimonials)
+// ============================================================
+export const platformReviews = pgTable('platform_reviews', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  profession: varchar('profession', { length: 255 }),
+  rating: real('rating').notNull().default(5),
+  feedback: text('feedback').notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

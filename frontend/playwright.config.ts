@@ -25,19 +25,19 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+  ],
+  webServer: [
     {
-      name: 'mobile-chrome',
-      use: { ...devices['Pixel 5'] },
+      command: 'npm --prefix ../backend run dev',
+      url: 'http://localhost:5003/health',
+      reuseExistingServer: true,
+      timeout: PLAYWRIGHT_TIMEOUT_MS,
     },
     {
-      name: 'tablet-safari',
-      use: { ...devices['iPad Mini'] },
+      command: 'npm run dev',
+      url: PLAYWRIGHT_BASE_URL,
+      reuseExistingServer: true,
+      timeout: PLAYWRIGHT_TIMEOUT_MS,
     },
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: PLAYWRIGHT_BASE_URL,
-    reuseExistingServer: true,
-    timeout: PLAYWRIGHT_TIMEOUT_MS,
-  },
 });

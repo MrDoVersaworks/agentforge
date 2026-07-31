@@ -159,4 +159,36 @@ router.put(
   })
 );
 
+router.get(
+  '/reviews',
+  asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+    const { platformReviews } = await import('../db/schema.js');
+    const reviews = await db.select().from(platformReviews).orderBy(desc(platformReviews.created_at));
+    res.status(200).json({
+      success: true,
+      data: reviews,
+    });
+  })
+);
+
+router.delete(
+  '/reviews/:id',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { platformReviews } = await import('../db/schema.js');
+    const [deleted] = await db
+      .delete(platformReviews)
+      .where(eq(platformReviews.id, req.params.id))
+      .returning();
+
+    if (deleted === undefined) {
+      throw new AppError('[ERR_ADMIN_REVIEW_NOT_FOUND] Review not found.', 404);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: null,
+    });
+  })
+);
+
 export default router;
