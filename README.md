@@ -4,7 +4,7 @@
 [![Playwright E2E](https://img.shields.io/badge/QA-Playwright-green)](https://playwright.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**AgentForge** is a production-grade, multi-tenant AI Orchestration platform designed to construct autonomous AI agents grounded in custom knowledge bases. Leveraging the Google Gemini API, pgvector, and Next.js, it facilitates private, vector-grounded chat interfaces with real-time text-streaming RAG pipelines.
+**AgentForge** is a multi-tenant AI Orchestration platform currently **under active development**, designed to construct autonomous AI agents grounded in custom knowledge bases. Leveraging the Google Gemini API, pgvector, and Next.js, it facilitates private, vector-grounded chat interfaces with real-time text-streaming RAG pipelines.
 
 ---
 
