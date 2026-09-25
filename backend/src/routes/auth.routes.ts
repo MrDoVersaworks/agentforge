@@ -56,28 +56,6 @@ function requireCsrfForCookieAuth(req: Request, res: Response): boolean {
 
 
 router.post(
-  '/sandbox',
-  authRateLimiter,
-  asyncHandler(async (_req: Request, res: Response): Promise<void> => {
-    const sandboxId = crypto.randomUUID();
-    const email = `sandbox+${sandboxId}@sandbox.agentforge.dev`;
-    const password = crypto.randomBytes(32).toString('hex');
-    const result = await registerUser({
-      email,
-      password,
-      name: 'Sandbox Guest',
-    });
-
-    res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, authCookieOptions());
-    setCsrfCookie(res);
-    res.status(201).json({
-      success: true,
-      data: { accessToken: result.accessToken, user: result.user },
-    });
-  })
-);
-
-router.post(
   '/register',
   authRateLimiter,
   validate(registerSchema),
