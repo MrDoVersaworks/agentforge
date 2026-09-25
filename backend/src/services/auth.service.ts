@@ -215,6 +215,7 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
     .values({
       user_id: user.id,
       token_hash: tokenMaterial.tokenHash,
+      session_id: sessionId,
       expires_at: refreshExpirySql(),
     })
     .returning({ id: refreshTokens.id });
