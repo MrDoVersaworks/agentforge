@@ -343,3 +343,7 @@ The existing CI production-build/type-check/E2E pipeline must pass after this ch
 
 ### Data boundary note
 This code change prevents creation of new sandbox accounts. It does not silently delete historical database rows created by the former sandbox flow. Any historical sandbox guest rows, if present in a live database, require an explicitly authorized data-cleanup operation after identifying them and confirming retention/deletion requirements.
+
+
+### Latest verification note
+After the initial sandbox-removal edits, the landing navigation was rechecked and a JSX wrapper mismatch introduced during the edit was corrected before closure. The final source cleanup also removed the now-unused React callback import. The final branch head is tracked separately from the earlier Vercel preview builds; therefore the earlier READY preview build is evidence for the immediately preceding sandbox-removal source, not proof of the final post-cleanup head until a matching deployment/build is observed.
