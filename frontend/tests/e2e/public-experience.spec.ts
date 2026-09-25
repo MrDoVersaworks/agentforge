@@ -33,6 +33,16 @@ test.describe('AgentForge responsive public experience', () => {
 });
 
 
+test('auth pages expose password visibility controls', async ({ page }) => {
+  for (const path of ['/login', '/register']) {
+    await page.goto(path, { waitUntil: 'commit', timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Show password' })).toBeVisible();
+    if (path === '/register') {
+      await expect(page.getByRole('button', { name: 'Show confirmation password' })).toBeVisible();
+    }
+  }
+});
+
   test('legal pages render with clear navigation and substantive fallback content', async ({ page }) => {
     for (const path of ['/terms', '/privacy']) {
       await page.goto(path, { waitUntil: 'commit', timeout: 10000 });
