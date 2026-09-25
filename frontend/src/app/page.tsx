@@ -512,7 +512,7 @@ export default function LandingPage() {
         </div>
       </main>
 
-      <div style={{ position: 'relative', zIndex: 10, backgroundColor: 'rgba(8, 10, 16, 0.4)' }}>
+      <div className="reviews-shell">
         <PlatformReviews />
       </div>
 
