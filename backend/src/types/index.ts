@@ -44,10 +44,6 @@ export const updateSettingsSchema = z.object({
   notification_email: z.string().email('Invalid email address').optional(),
 });
 
-export const resendKeySchema = z.object({
-  resend_key: z.string().min(1, 'Resend API Key is required'),
-});
-
 // Agent DTOs
 export const agentCreateSchema = z.object({
   name: z.string().min(1, 'Name is required'),
