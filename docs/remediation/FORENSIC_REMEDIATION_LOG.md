@@ -347,3 +347,26 @@ This code change prevents creation of new sandbox accounts. It does not silently
 
 ### Latest verification note
 After the initial sandbox-removal edits, the landing navigation was rechecked and a JSX wrapper mismatch introduced during the edit was corrected before closure. The final source cleanup also removed the now-unused React callback import. The final branch head is tracked separately from the earlier Vercel preview builds; therefore the earlier READY preview build is evidence for the immediately preceding sandbox-removal source, not proof of the final post-cleanup head until a matching deployment/build is observed.
+
+
+## Legal pages UI and content remediation
+
+### Original behavior
+The Terms and Privacy routes used the same sparse dark-page shell with large fixed spacing and only two very short built-in fallback sections. When the public legal API was unavailable, the pages silently displayed that incomplete fallback. The server-provided HTML was rendered without an explanatory document shell or navigation between legal pages.
+
+### Intended remediation behavior
+Legal pages should be readable, calm, responsive, navigable, and explicit about their document state. They should provide meaningful built-in fallback summaries rather than presenting an obviously incomplete document as if it were the full policy. The UI should clearly expose Terms, Privacy, and the normal Start Building path without reintroducing the removed sandbox.
+
+### Behavior that must remain
+The existing public legal API endpoints remain the source for the current published documents when available. Terms and Privacy remain publicly accessible. No authentication requirement, legal endpoint contract, or product workflow was removed.
+
+### Implementation
+- Rebuilt both pages with a shared legal-page presentation: responsive header, document metadata, readable article surface, desktop navigation, mobile-safe layout, and consistent AgentForge navigation.
+- Improved the fallback Terms content to cover acceptance, user material, AI output limitations, security/misuse, service changes, and contact.
+- Improved the fallback Privacy content to cover information handled, purposes, sensitive credentials, service providers, retention/deletion, and privacy choices.
+- Added explicit loading and retrieval-failure states instead of silently hiding a failed document fetch.
+- Added legal-page E2E coverage for navigation and article rendering.
+- Preserved the backend legal document endpoints and server-provided document rendering path.
+
+### Proof boundary
+This is a UI/content remediation, not legal advice or a jurisdiction-specific legal compliance certification. The product owner or qualified counsel should review the final legal wording for the jurisdictions and business practices that actually apply.
