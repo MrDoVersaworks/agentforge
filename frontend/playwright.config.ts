@@ -29,12 +29,20 @@ export default defineConfig({
     },
   ],
   webServer: PUBLIC_ONLY
-    ? [{
-        command: 'npm run dev',
-        url: PLAYWRIGHT_BASE_URL,
-        reuseExistingServer: true,
-        timeout: PLAYWRIGHT_TIMEOUT_MS,
-      }]
+    ? [
+        {
+          command: "node -e \"require('http').createServer((req, res) => { res.statusCode = 404; res.end(); }).listen(3004)\"",
+          url: 'http://localhost:3004',
+          reuseExistingServer: true,
+          timeout: PLAYWRIGHT_TIMEOUT_MS,
+        },
+        {
+          command: 'npm run dev',
+          url: PLAYWRIGHT_BASE_URL,
+          reuseExistingServer: true,
+          timeout: PLAYWRIGHT_TIMEOUT_MS,
+        },
+      ]
     : [
         {
           command: 'npm --prefix ../backend run dev',
