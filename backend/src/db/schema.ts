@@ -31,10 +31,6 @@ export const users = pgTable('users', {
   gemini_key_iv: varchar('gemini_key_iv', { length: 64 }),
   gemini_key_tag: varchar('gemini_key_tag', { length: 64 }),
   gemini_model: varchar('gemini_model', { length: 100 }).default('gemini-2.5-flash'),
-  encrypted_resend_key: text('encrypted_resend_key'),
-  resend_key_iv: varchar('resend_key_iv', { length: 64 }),
-  resend_key_tag: varchar('resend_key_tag', { length: 64 }),
-  notification_email: varchar('notification_email', { length: 255 }),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
