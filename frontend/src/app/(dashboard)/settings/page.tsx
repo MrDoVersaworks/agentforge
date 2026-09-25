@@ -129,7 +129,7 @@ export default function SettingsPage() {
     setDeletingAccount(true);
     try {
       await api.delete('/settings/account');
-      addToast('success', 'Your account has been successfully vaporized.');
+      addToast('success', 'Your account has been permanently deleted.');
       await logout();
       router.push('/login');
     } catch (err: unknown) {
@@ -320,7 +320,7 @@ export default function SettingsPage() {
 
             <div className="danger-action-row">
               <div className="action-text">
-                <h4>Vaporize Account Data</h4>
+                <h4>Delete Account & Data</h4>
                 <p>Delete your profile and permanently erase all custom AI agents, document chunks, and chat history.</p>
               </div>
               <button
@@ -329,7 +329,7 @@ export default function SettingsPage() {
                 disabled={deletingAccount}
                 onClick={() => setShowDeleteAccount(true)}
               >
-                Vaporize Account
+                Delete Account
               </button>
             </div>
           </div>
