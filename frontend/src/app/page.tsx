@@ -222,31 +222,6 @@ export default function LandingPage() {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  const [showPolicyModal, setShowPolicyModal] = useState(false);
-
-  // ── Sandbox Demo (auto-provision guest account with policy acceptance) ──
-  const openDemoSandboxModal = () => {
-    setDemoError('');
-    setShowPolicyModal(true);
-  };
-
-  const confirmDemoSandbox = useCallback(async () => {
-    setShowPolicyModal(false);
-    if (isDemoLoading) return;
-    setIsDemoLoading(true);
-    setDemoError('');
-
-    try {
-      const { data } = await api.post('/auth/sandbox');
-      setAccessToken(data.data.accessToken);
-      router.push('/dashboard');
-    } catch {
-      setDemoError('Failed to initialize sandbox. Please try registering manually.');
-    } finally {
-      setIsDemoLoading(false);
-    }
-  }, [isDemoLoading, login, register, router]);
-
   if (!mounted) return null;
 
   if (isLoading || isAuthenticated) {
@@ -333,30 +308,9 @@ export default function LandingPage() {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
-                Start Building - Free
-              </button>
-              <button
-                className="btn btn-secondary btn-lg"
-                onClick={openDemoSandboxModal}
-                disabled={isDemoLoading}
-              >
-                {isDemoLoading ? (
-                  <>
-                    <span className="spinner" style={{ width: 16, height: 16 }} />
-                    Provisioning...
-                  </>
-                ) : (
-                  <>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="5 3 19 12 5 21 5 3" />
-                    </svg>
-                    Demo Sandbox
-                  </>
-                )}
+                Start Building
               </button>
             </div>
-            {demoError && <p className="demo-error">{demoError}</p>}
-
             {/* Tech stack pills */}
             <div className="tech-pills">
               <span className="tech-pill">Next.js 14</span>
@@ -515,27 +469,6 @@ export default function LandingPage() {
         techStack="Next.js & Express"
         contactLink="https://devpulse-zeta-six.vercel.app/"
       />
-
-      {/* ── Policy Acceptance Modal for Demo Sandbox ── */}
-      {showPolicyModal && (
-        <div className="policy-modal-backdrop">
-          <div className="policy-modal" role="dialog" aria-modal="true" aria-labelledby="policy-modal-title">
-            <p className="eyebrow">Before you continue</p>
-            <h3 id="policy-modal-title">Terms of Service and Usage Policy</h3>
-            <p className="policy-modal-copy">
-              To access the AgentForge Interactive Sandbox, please confirm that you agree to our Platform Terms of Service, Privacy Policy, and Responsible AI Usage guidelines.
-            </p>
-            <div className="policy-modal-actions">
-              <button className="btn btn-secondary" onClick={() => setShowPolicyModal(false)}>
-                Decline
-              </button>
-              <button className="btn btn-primary" onClick={confirmDemoSandbox}>
-                Accept and Launch Sandbox
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <style jsx>{`
         .landing-page {
