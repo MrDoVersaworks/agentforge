@@ -92,7 +92,7 @@ jobs:
       - name: Production Build
         run: npm run build
         env:
-          NEXT_PUBLIC_API_URL: http://127.0.0.1:5999
+          NEXT_PUBLIC_API_URL: http://localhost:3003
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
       - name: Public E2E
