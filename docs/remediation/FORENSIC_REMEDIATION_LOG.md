@@ -313,3 +313,33 @@ Use the following structure when the production verification is actually perform
 **Production verification is currently an outstanding evidence gate.** The remediation must remain documented as implemented and pre-production-tested, but not fully closed, until the matrix above has been completed against the real production environment. Once production testing is performed, replace each TBD/UNVERIFIED entry with the actual test, result, evidence, and limitation. Any failure or material unverified item must remain open and be investigated rather than being converted into a pass by inference.
 
 No application behavior is changed by this section. This is documentation and evidence-tracking only.
+
+## Sandbox removal remediation
+
+### Original behavior
+The public landing page exposed a "Demo Sandbox" flow. The client opened a policy-acceptance modal and then called `POST /api/auth/sandbox`. The backend generated a synthetic sandbox email/password, registered that account, issued a normal authenticated session, and redirected the browser into the dashboard. This was an anonymous account-creation path distinct from the normal sign-up/sign-in flow.
+
+### Intended remediation behavior
+The sandbox is removed completely. Public visitors must use the normal authentication flow. "Start Building" is the only landing-page build CTA; existing users retain a direct Sign In action. There is no public sandbox provisioning endpoint and no policy modal or sandbox client flow.
+
+### Behavior that must remain
+Normal registration, normal login, authenticated dashboard access, legal Terms/Privacy links, reviews, responsive landing behavior, and the rest of the existing authenticated product remain available. No sandbox-only data path is reused by ordinary accounts.
+
+### Implementation
+- Removed the `POST /api/auth/sandbox` backend route.
+- Removed the sandbox provisioning client flow, policy modal, loading/error state, and Demo Sandbox CTA from the landing page.
+- Removed the secondary "Get Started" landing CTA so the build action is consistently "Start Building"; Sign In remains available for existing users.
+- Updated public E2E coverage to prove Start Building remains, Demo Sandbox is absent, and legal/review/mobile surfaces remain.
+- No database schema change is required because the sandbox did not have a dedicated table or persistent sandbox-specific schema.
+
+### Positive proof
+- Current `audit-remediation` source contains no `/auth/sandbox` route in `backend/src/routes/auth.routes.ts`.
+- Current landing source contains no executable sandbox flow or policy modal.
+- Current public E2E explicitly asserts zero Demo Sandbox buttons and two Start Building buttons on desktop/mobile layouts.
+- The backend authentication service used by normal registration/login remains unchanged by this removal.
+
+### Regression proof
+The existing CI production-build/type-check/E2E pipeline must pass after this change. The public E2E continues to verify Sign In, Start Building, Terms of Service, Privacy Policy, review submission, and mobile rendering. Production verification remains a separate gate and must not be inferred from CI alone.
+
+### Data boundary note
+This code change prevents creation of new sandbox accounts. It does not silently delete historical database rows created by the former sandbox flow. Any historical sandbox guest rows, if present in a live database, require an explicitly authorized data-cleanup operation after identifying them and confirming retention/deletion requirements.
