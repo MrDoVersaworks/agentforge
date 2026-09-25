@@ -464,3 +464,7 @@ The first implementation placed the production migration gate in the frontend bu
 The remediation now moves the authoritative gate into the backend Vercel deployment path: the backend package build invokes backend/scripts/vercel-build.mjs, and the legacy builds/routes configuration is removed in favor of Vercel's Express framework deployment. Production runs the committed migration runner before TypeScript compilation; non-production deployments skip production migration. The frontend gate remains defensive, but the backend deployment is the primary production database reconciliation point.
 
 Verification requirement: the next backend production build must show the migration gate before the backend build in Vercel build logs. Do not treat the configuration as proven until that ordering is observed.
+
+
+### Deployment-trigger probe
+A minimal documentation-only change was made on `main` solely to generate a fresh Git push event for the Vercel Git integration. No application behavior or remediation logic was changed. The resulting push is being used only to determine whether Vercel automatically creates a deployment for a new `main` commit.
