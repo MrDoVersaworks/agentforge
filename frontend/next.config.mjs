@@ -1,11 +1,23 @@
 /** @type {import('next').NextConfig} */
+const configuredApiOrigin = (() => {
+  const value = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (!value) return null;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+})();
+
+const connectSources = ["'self'", configuredApiOrigin || 'https:'].join(' ');
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://app.termly.io https://www.googletagmanager.com https://www.google-analytics.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https:",
+  `connect-src ${connectSources}`,
   "frame-src 'self' https://app.termly.io",
   "object-src 'none'",
   "base-uri 'self'",
