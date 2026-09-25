@@ -14,10 +14,10 @@ import {
   deleteUserAccount,
 } from '../services/auth.service.js';
 import { jwtBlocklist } from '../utils/blocklist.js';
+import { deleteAccountWithSessionInvalidation } from '../utils/accountDeletion.js';
 
 const router = Router();
 
-// POST /register
 router.post(
   '/register',
   authRateLimiter,
@@ -25,8 +25,7 @@ router.post(
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
       const body = req.body as { email: string; password: string; name: string };
-      const { email, password, name } = body;
-      const result = await registerUser({ email, password, name });
+      const result = await registerUser(body);
 
       res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, {
         httpOnly: true,
@@ -38,10 +37,7 @@ router.post(
 
       res.status(201).json({
         success: true,
-        data: {
-          accessToken: result.accessToken,
-          user: result.user,
-        },
+        data: { accessToken: result.accessToken, user: result.user },
       });
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes('already exists')) {
@@ -56,7 +52,6 @@ router.post(
   })
 );
 
-// POST /login
 router.post(
   '/login',
   authRateLimiter,
@@ -64,8 +59,7 @@ router.post(
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
       const body = req.body as { email: string; password: string };
-      const { email, password } = body;
-      const result = await loginUser(email, password);
+      const result = await loginUser(body.email, body.password);
 
       res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, {
         httpOnly: true,
@@ -77,10 +71,7 @@ router.post(
 
       res.status(200).json({
         success: true,
-        data: {
-          accessToken: result.accessToken,
-          user: result.user,
-        },
+        data: { accessToken: result.accessToken, user: result.user },
       });
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes('Invalid email or password')) {
@@ -95,7 +86,6 @@ router.post(
   })
 );
 
-// POST /refresh
 router.post(
   '/refresh',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -126,7 +116,6 @@ router.post(
   })
 );
 
-// POST /logout
 router.post(
   '/logout',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -137,32 +126,23 @@ router.post(
     }
 
     const authHeader = req.headers.authorization;
-    if (authHeader) {
-      const token = authHeader.split(' ')[1];
-      if (token) {
-        const signature = token.split('.')[2];
-        if (signature) {
-          jwtBlocklist.add(signature);
-        }
-      }
+    const token = authHeader?.split(' ')[1];
+    const signature = token?.split('.')[2];
+    if (signature) {
+      jwtBlocklist.add(signature);
     }
 
     res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
 
-    res.status(200).json({
-      success: true,
-      data: null,
-    });
+    res.status(200).json({ success: true, data: null });
   })
 );
 
-// GET /profile (for AuthContext bootstrap)
 router.get(
   '/profile',
   authMiddleware,
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const userId = req.user?.id as string;
-    // Import getSettings inline to avoid circular dependency
     const { getSettings } = await import('../services/settings.service.js');
     const profile = await getSettings(userId);
 
@@ -173,7 +153,6 @@ router.get(
   })
 );
 
-
 router.delete(
   '/account',
   authMiddleware,
@@ -182,28 +161,19 @@ router.delete(
     try {
       const userId = req.user?.id as string;
       const body = req.body as { password: string };
-      const { password } = body;
-
-      // Blocklist the current access token immediately
       const authHeader = req.headers.authorization;
-      if (authHeader) {
-        const token = authHeader.split(' ')[1];
-        if (token) {
-          const signature = token.split('.')[2];
-          if (signature) {
-            jwtBlocklist.add(signature);
-          }
+      const token = authHeader?.split(' ')[1];
+      const signature = token?.split('.')[2];
+
+      await deleteAccountWithSessionInvalidation(
+        () => deleteUserAccount(userId, body.password),
+        () => {
+          if (signature) jwtBlocklist.add(signature);
         }
-      }
-      
-      await deleteUserAccount(userId, password);
+      );
 
       res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
-
-      res.status(200).json({
-        success: true,
-        data: null,
-      });
+      res.status(200).json({ success: true, data: null });
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes('password')) {
         res.status(403).json({
