@@ -295,16 +295,16 @@ export default function SettingsPage() {
           backdrop-filter: blur(10px);
         }
         .delete-modal {
-          width: min(100%, 480px);
-          padding: 28px;
+          width: min(100%, 500px);
+          padding: 32px;
           border: 1px solid rgba(251, 113, 133, 0.22);
           border-radius: 20px;
           background: var(--surface, #10131d);
           box-shadow: 0 24px 80px rgba(0,0,0,.35);
         }
         .delete-modal-icon {
-          width: 36px;
-          height: 36px;
+          width: 42px;
+          height: 42px;
           display: grid;
           place-items: center;
           margin-bottom: 16px;
@@ -312,13 +312,15 @@ export default function SettingsPage() {
           background: rgba(251, 113, 133, 0.12);
           color: var(--accent-rose);
           font-weight: 800;
+          border: 1px solid rgba(251, 113, 133, 0.18);
         }
         .delete-modal h2 { font-size: 1.15rem; font-weight: 750; margin-bottom: 8px; }
         .delete-modal p { color: var(--text-secondary); font-size: .88rem; line-height: 1.65; }
         .delete-password-label { display: block; margin-top: 20px; margin-bottom: 7px; font-size: .78rem; font-weight: 650; color: var(--text-primary); }
-        .delete-modal-actions { display: grid; grid-template-columns: 1fr 1.15fr; gap: 12px; margin-top: 24px; }\n        .delete-modal-actions .btn { min-height: 46px; }
+        .delete-modal-actions { display: grid; grid-template-columns: 1fr 1.15fr; gap: 12px; margin-top: 24px; }
+        .delete-modal-actions .btn { min-height: 46px; }
         @media (max-width: 560px) {
-          .delete-modal-actions { flex-direction: column-reverse; }
+          .delete-modal-actions { grid-template-columns: 1fr; }
           .delete-modal-actions .btn { width: 100%; }
         }
 
