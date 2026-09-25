@@ -100,3 +100,4 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: http://127.0.0.1:5999
           PLAYWRIGHT_PUBLIC_ONLY: '1'
+          PLAYWRIGHT_RETRIES: '0'
