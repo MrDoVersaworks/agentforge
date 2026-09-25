@@ -26,11 +26,6 @@ export default function SettingsPage() {
   const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash');
   const [savingKey, setSavingKey] = useState(false);
 
-  // ── Resend / Notification States ──
-  const [resendKey, setResendKey] = useState('');
-  const [notificationEmail, setNotificationEmail] = useState('');
-  const [savingResend, setSavingResend] = useState(false);
-
   // ── Profile States ──
   const [name, setName] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
@@ -45,7 +40,6 @@ export default function SettingsPage() {
     if (user) {
       setName(user.name ? user.name : '');
       setGeminiModel(user.geminiModel ? user.geminiModel : 'gemini-2.5-flash');
-      setNotificationEmail(user.notificationEmail ? user.notificationEmail : '');
     }
   }, [user]);
 
@@ -75,34 +69,6 @@ export default function SettingsPage() {
     }
   };
 
-  // ── Save Resend API Key & Notification Email ──
-  const handleSaveResend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingResend(true);
-
-    try {
-      if (resendKey.trim()) {
-        await api.post('/settings/resend-key', {
-          resend_key: resendKey.trim(),
-        });
-        setResendKey('');
-      }
-
-      if (notificationEmail.trim()) {
-        await api.patch('/settings', {
-          notification_email: notificationEmail.trim(),
-        });
-      }
-
-      await refreshUser();
-      addToast('success', 'Email notification settings updated.');
-    } catch (err: unknown) {
-      addToast('error', extractErrorMessage(err, 'Failed to update notification settings.'));
-    } finally {
-      setSavingResend(false);
-    }
-  };
-
   // ── Save Profile Name ──
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,7 +91,7 @@ export default function SettingsPage() {
     }
   };
 
-  // ── Account Vaporization ──
+  // ── Account deletion ──
   const handleDeleteAccount = async () => {
     setDeletingAccount(true);
     try {
@@ -155,7 +121,7 @@ export default function SettingsPage() {
       <div className="page-header">
         <div className="page-header-text">
           <h1>Global Settings</h1>
-          <p>Configure LLM credentials, email notifications, update account info, and manage data vaporization</p>
+          <p>Configure your model credentials, profile, and account</p>
         </div>
       </div>
 
@@ -212,58 +178,7 @@ export default function SettingsPage() {
             </form>
           </div>
 
-          {/* Card 2: Resend Email Notifications */}
-          <div className="glass settings-card">
-            <div className="card-header-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="amber-icon">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                <polyline points="22,6 12,13 2,6" />
-              </svg>
-              <h3>Email Notifications (Resend)</h3>
-            </div>
-            <p className="card-desc">
-              Configure your Resend API key for transactional email delivery (contact form alerts, system notifications). Your key is encrypted at rest using AES-256-GCM.
-            </p>
-
-            <form onSubmit={handleSaveResend}>
-              <div className="form-group">
-                <label className="input-label">Resend API Key</label>
-                <div className="key-input-wrapper">
-                  <input
-                    type="password"
-                    className="input-field"
-                    placeholder={user?.hasResendKey ? '••••••••••••••••••••••••••••••••' : 'Enter your Resend API Key'}
-                    value={resendKey}
-                    onChange={(e) => setResendKey(e.target.value)}
-                  />
-                  {user?.hasResendKey && (
-                    <span className="key-status-indicator active">
-                      <span className="active-dot" />
-                      Active Key Saved
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="input-label">Notification Email</label>
-                <input
-                  type="email"
-                  className="input-field"
-                  placeholder="admin@yourdomain.com"
-                  value={notificationEmail}
-                  onChange={(e) => setNotificationEmail(e.target.value)}
-                />
-                <span className="field-hint">Contact form submissions and system alerts will be forwarded to this address.</span>
-              </div>
-
-              <button type="submit" className="btn btn-primary" disabled={savingResend}>
-                {savingResend ? 'Saving...' : 'Save Notification Settings'}
-              </button>
-            </form>
-          </div>
-
-          {/* Card 3: Profile Setup */}
+          {/* Card 2: Profile Setup */}
           <div className="glass settings-card">
             <div className="card-header-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="cyan-icon">
@@ -339,7 +254,7 @@ export default function SettingsPage() {
       </div>
 
       {showDeleteAccount && (
-        <div className="delete-modal-backdrop" role="presentation" onClick={() => !deletingAccount && setShowDeleteAccount(false)}>
+        <div className="delete-modal-backdrop" role="presentation" onClick={() => { if (!deletingAccount) { setShowDeleteAccount(false); setDeletePassword(''); } }}>
           <section className="delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-account-title" onClick={(event) => event.stopPropagation()}>
             <div className="delete-modal-icon" aria-hidden="true">!</div>
             <h2 id="delete-account-title">Delete your account?</h2>
@@ -357,10 +272,10 @@ export default function SettingsPage() {
               placeholder="Your account password"
             />
             <div className="delete-modal-actions">
-              <button type="button" className="btn btn-secondary" disabled={deletingAccount} onClick={() => setShowDeleteAccount(false)}>
+              <button type="button" className="btn btn-secondary" disabled={deletingAccount} onClick={() => { setShowDeleteAccount(false); setDeletePassword(''); }}>
                 Keep Account
               </button>
-              <button type="button" className="btn btn-danger" disabled={deletingAccount || !deletePassword} onClick={() => { setShowDeleteAccount(false); void handleDeleteAccount(); }}>
+              <button type="button" className="btn btn-danger" disabled={deletingAccount || !deletePassword} onClick={() => void handleDeleteAccount()}>
                 {deletingAccount ? 'Deleting…' : 'Delete Permanently'}
               </button>
             </div>
@@ -401,7 +316,7 @@ export default function SettingsPage() {
         .delete-modal h2 { font-size: 1.15rem; font-weight: 750; margin-bottom: 8px; }
         .delete-modal p { color: var(--text-secondary); font-size: .88rem; line-height: 1.65; }
         .delete-password-label { display: block; margin-top: 20px; margin-bottom: 7px; font-size: .78rem; font-weight: 650; color: var(--text-primary); }
-        .delete-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+        .delete-modal-actions { display: grid; grid-template-columns: 1fr 1.15fr; gap: 12px; margin-top: 24px; }\n        .delete-modal-actions .btn { min-height: 46px; }
         @media (max-width: 560px) {
           .delete-modal-actions { flex-direction: column-reverse; }
           .delete-modal-actions .btn { width: 100%; }
