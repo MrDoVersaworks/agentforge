@@ -38,10 +38,23 @@ export function getAccessToken(): string | null {
   return accessToken;
 }
 
+function getCsrfToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.split('; ').find((cookie) => cookie.startsWith('agentforge_csrf_token='));
+  return match ? decodeURIComponent(match.split('=').slice(1).join('=')) : null;
+}
+
 api.interceptors.request.use(
   (config) => {
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    if (
+      typeof config.url === 'string' &&
+      (config.url.includes('/auth/refresh') || config.url.includes('/auth/logout'))
+    ) {
+      const csrfToken = getCsrfToken();
+      if (csrfToken) config.headers['X-CSRF-Token'] = csrfToken;
     }
     return config;
   },
@@ -97,7 +110,13 @@ api.interceptors.response.use(
         const { data } = await axios.post(
           `${API_BASE_URL}/auth/refresh`,
           {},
-          { withCredentials: true }
+          {
+            withCredentials: true,
+            headers: (() => {
+              const csrfToken = getCsrfToken();
+              return csrfToken ? { 'X-CSRF-Token': csrfToken } : undefined;
+            })(),
+          }
         );
 
         const newToken = data.data.accessToken;
