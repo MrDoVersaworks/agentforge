@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { and, eq, gt, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import { REFRESH_TOKEN_BYTES } from '../config/constants.js';
 import { config } from '../config/index.js';
 import {
@@ -35,6 +35,11 @@ interface AuthResult {
   user: AuthenticatedUser;
 }
 
+export interface RefreshResult {
+  accessToken: string;
+  refreshToken: string;
+}
+
 interface AuthUserRecord {
   id: string;
   email: string;
@@ -55,10 +60,11 @@ function requireGeminiModel(model: string | null): string {
   return model;
 }
 
-function createAccessToken(user: Pick<AuthUserRecord, 'id' | 'email'>): string {
+function createAccessToken(user: Pick<AuthUserRecord, 'id' | 'email'>, sessionId: string): string {
   const accessPayload: UserPayload = {
     id: user.id,
     email: user.email,
+    session_id: sessionId,
   };
 
   return jwt.sign(accessPayload, config.JWT_ACCESS_SECRET, {
@@ -85,10 +91,11 @@ function formatRefreshToken(tokenId: string, rawToken: string): string {
 function buildAuthResult(
   user: AuthUserRecord,
   refreshToken: string,
+  sessionId: string,
   hasApiKey: boolean
 ): AuthResult {
   return {
-    accessToken: createAccessToken(user),
+    accessToken: createAccessToken(user, sessionId),
     refreshToken,
     user: {
       id: user.id,
@@ -143,6 +150,7 @@ async function persistRegistration(
       .values({
         user_id: user.id,
         token_hash: tokenMaterial.tokenHash,
+        session_id: sessionId,
         expires_at: refreshExpirySql(),
       })
       .returning({ id: refreshTokens.id });
@@ -164,9 +172,10 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
     bcrypt.hash(input.password, BCRYPT_SALT_ROUNDS),
     createRefreshTokenMaterial(),
   ]);
+  const sessionId = crypto.randomUUID();
   const registration = await persistRegistration(input, passwordHash, tokenMaterial);
 
-  return buildAuthResult(registration.user, registration.refreshToken, false);
+  return buildAuthResult(registration.user, registration.refreshToken, sessionId, false);
 }
 
 async function loadLoginUser(email: string) {
@@ -199,6 +208,7 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
   }
 
   const tokenMaterial = await createRefreshTokenMaterial();
+  const sessionId = crypto.randomUUID();
   const insertedTokens = await db
     .insert(refreshTokens)
     .values({
@@ -213,7 +223,7 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
   }
 
   const refreshToken = formatRefreshToken(insertedTokens[0].id, tokenMaterial.rawToken);
-  return buildAuthResult(user, refreshToken, user.encrypted_gemini_key !== null);
+  return buildAuthResult(user, refreshToken, sessionId, user.encrypted_gemini_key !== null);
 }
 
 function parseRefreshToken(refreshTokenValue: string): {
@@ -235,25 +245,32 @@ function parseRefreshToken(refreshTokenValue: string): {
   };
 }
 
-export async function refreshAccessToken(refreshTokenValue: string): Promise<string> {
+export async function refreshAccessToken(refreshTokenValue: string): Promise<RefreshResult> {
   const { tokenId, rawToken } = parseRefreshToken(refreshTokenValue);
   const tokenRows = await db
     .select()
     .from(refreshTokens)
-    .where(
-      and(
-        eq(refreshTokens.id, tokenId),
-        gt(refreshTokens.expires_at, sql.raw('CURRENT_TIMESTAMP'))
-      )
-    )
+    .where(eq(refreshTokens.id, tokenId))
     .limit(1);
 
   if (tokenRows.length === 0) {
+    throw new Error('[ERR_REFRESH_TOKEN_INVALID] Invalid refresh token.');
+  }
+
+  const storedToken = tokenRows[0];
+  if (storedToken.revoked_at !== null) {
+    await db
+      .update(refreshTokens)
+      .set({ revoked_at: sql.raw('CURRENT_TIMESTAMP'), updated_at: sql.raw('CURRENT_TIMESTAMP') })
+      .where(eq(refreshTokens.user_id, storedToken.user_id));
+    throw new Error('[ERR_REFRESH_TOKEN_REPLAY] Refresh token replay detected. All sessions were invalidated.');
+  }
+
+  if (new Date(storedToken.expires_at).getTime() <= Date.now()) {
     await db.delete(refreshTokens).where(eq(refreshTokens.id, tokenId));
     throw new Error('[ERR_REFRESH_TOKEN_EXPIRED] Refresh token expired or invalid.');
   }
 
-  const storedToken = tokenRows[0];
   const isValid = await bcrypt.compare(rawToken, storedToken.token_hash);
   if (!isValid) {
     throw new Error('[ERR_REFRESH_TOKEN_INVALID] Invalid refresh token.');
@@ -269,12 +286,74 @@ export async function refreshAccessToken(refreshTokenValue: string): Promise<str
     throw new Error('[ERR_USER_NOT_FOUND] User account not found.');
   }
 
-  return createAccessToken(userRows[0]);
+  const tokenMaterial = await createRefreshTokenMaterial();
+  const rotated = await db.transaction(async (transaction) => {
+    const revoked = await transaction
+      .update(refreshTokens)
+      .set({
+        revoked_at: sql.raw('CURRENT_TIMESTAMP'),
+        updated_at: sql.raw('CURRENT_TIMESTAMP'),
+      })
+      .where(
+        and(
+          eq(refreshTokens.id, tokenId),
+          isNull(refreshTokens.revoked_at)
+        )
+      )
+      .returning({ id: refreshTokens.id });
+
+    if (revoked.length === 0) {
+      throw new Error('[ERR_REFRESH_TOKEN_REPLAY] Refresh token was already used.');
+    }
+
+    const inserted = await transaction
+      .insert(refreshTokens)
+      .values({
+        user_id: storedToken.user_id,
+        token_hash: tokenMaterial.tokenHash,
+        session_id: storedToken.session_id,
+        expires_at: refreshExpirySql(),
+      })
+      .returning({ id: refreshTokens.id });
+
+    if (inserted.length === 0) {
+      throw new Error('[ERR_REFRESH_TOKEN_CREATE_FAILED] Failed to rotate refresh token.');
+    }
+
+    return inserted[0].id;
+  });
+
+  return {
+    accessToken: createAccessToken(userRows[0], storedToken.session_id),
+    refreshToken: formatRefreshToken(rotated, tokenMaterial.rawToken),
+  };
+}
+
+export async function isSessionActive(sessionId: string): Promise<boolean> {
+  const activeSessions = await db
+    .select({ id: refreshTokens.id })
+    .from(refreshTokens)
+    .where(
+      and(
+        eq(refreshTokens.session_id, sessionId),
+        isNull(refreshTokens.revoked_at),
+        gt(refreshTokens.expires_at, sql.raw('CURRENT_TIMESTAMP'))
+      )
+    )
+    .limit(1);
+
+  return activeSessions.length > 0;
 }
 
 export async function logoutUser(refreshTokenValue: string): Promise<void> {
   const { tokenId } = parseRefreshToken(refreshTokenValue);
-  await db.delete(refreshTokens).where(eq(refreshTokens.id, tokenId));
+  await db
+    .update(refreshTokens)
+    .set({
+      revoked_at: sql.raw('CURRENT_TIMESTAMP'),
+      updated_at: sql.raw('CURRENT_TIMESTAMP'),
+    })
+    .where(and(eq(refreshTokens.id, tokenId), isNull(refreshTokens.revoked_at)));
   logger.info('AUTH', 'Successfully invalidated session refresh token ID: ' + tokenId);
 }
 
