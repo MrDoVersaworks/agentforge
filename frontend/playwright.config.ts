@@ -37,7 +37,7 @@ export default defineConfig({
           timeout: PLAYWRIGHT_TIMEOUT_MS,
         },
         {
-          command: 'npm run dev',
+          command: 'npm run start -- -p 3003',
           url: PLAYWRIGHT_BASE_URL,
           reuseExistingServer: true,
           timeout: PLAYWRIGHT_TIMEOUT_MS,
