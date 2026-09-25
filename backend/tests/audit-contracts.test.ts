@@ -57,7 +57,8 @@ test('public sandbox no longer contains a client-visible fixed credential pair',
 
   assert.doesNotMatch(landing, /guest@sandbox\.agentforge\.dev/);
   assert.doesNotMatch(landing, /SandboxDemo2026!/);
-  assert.doesNotMatch(landing, /auth\\/sandbox/);\n  assert.match(landing, /Start Building/);
+  assert.doesNotMatch(landing, /auth\\/sandbox/);
+  assert.match(landing, /Start Building/);
 });
 
 test('review publication requires moderation state', () => {
