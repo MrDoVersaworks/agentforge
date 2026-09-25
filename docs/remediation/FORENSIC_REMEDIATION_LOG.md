@@ -370,3 +370,41 @@ The existing public legal API endpoints remain the source for the current publis
 
 ### Proof boundary
 This is a UI/content remediation, not legal advice or a jurisdiction-specific legal compliance certification. The product owner or qualified counsel should review the final legal wording for the jurisdictions and business practices that actually apply.
+
+
+## Follow-up remediation: legal, account, authentication, and email-settings review
+
+### Cross-project comparison
+The related NexusDoc and FlowSync repositories were inspected at their current `main` state for this specific question. Both expose an owner-protected admin settings area containing platform-level Google Analytics and Termly configuration. Neither inspected admin settings page exposes a Resend credential.
+
+AgentForge does have an admin surface (`frontend/src/app/admin/settings`, `frontend/src/app/admin/inbox`) and its backend admin router is protected by `authMiddleware` plus `ownerMiddleware`. The AgentForge Resend control is different: it is currently a per-user credential stored in the `users` table through `/api/settings/resend-key`, together with a per-user notification email. No Resend sending service or contact-notification delivery path was found in the AgentForge source inspected during this review. Therefore it cannot be honestly described as the same platform-admin integration used by NexusDoc or FlowSync. It is currently a user-scoped configuration whose operational delivery path is not evidenced.
+
+This distinction is recorded rather than moving the setting into admin and inventing a platform behavior. A separate decision is required if AgentForge is intended to support platform-wide transactional email.
+
+### Authentication production finding
+Vercel confirms the currently deployed production frontend and backend still point to `main` commit `b6b6592...`, while the remediation branch has separate READY preview deployments. Therefore a visitor to the published production site can still encounter pre-remediation sandbox and authentication behavior.
+
+A production runtime review for the backend found repeated Express rate-limit proxy configuration warnings on the old production deployment. It did not find matching `register`, `login`, or `ERR_` application error logs in the available 24-hour runtime-log query. Consequently the user's observed login failure cannot be attributed to a specific production application exception from the available logs.
+
+The remediation branch also contained a concrete authentication defect: login set the refresh cookie with production-inappropriate `SameSite=Strict` and did not issue the CSRF cookie, while the refresh endpoint requires a matching CSRF token for cookie-authenticated refresh. Login now uses the same production cookie/CSRF contract as registration.
+
+### Account deletion finding
+The settings UI previously called `DELETE /api/settings/account`, but the AgentForge backend settings router does not expose that endpoint. The actual password-protected deletion endpoint is `DELETE /api/auth/account`.
+
+The UI has been corrected to call the existing password-protected endpoint. The destructive action was also redesigned from a browser `confirm()` dialog into a deliberate in-app confirmation modal requiring the account password, with clear consequences, cancellation, disabled state, and responsive layout. The misleading "vaporize" terminology was replaced with explicit account-deletion language.
+
+### Password visibility
+Login and registration now provide explicit Show/Hide controls for password and confirmation-password fields. This does not expose stored passwords or alter credential handling; it only changes whether the current field value is visually masked in the browser.
+
+### Registration feedback
+Successful registration now provides explicit in-page confirmation before continuing to the authenticated workspace. Existing automatic post-registration sign-in behavior remains intact.
+
+### Verification additions
+Public E2E coverage now checks:
+- Terms and Privacy page navigation/layout.
+- Demo Sandbox absence and Start Building presence.
+- Login password visibility.
+- Registration password and confirmation-password visibility.
+- Existing public review and mobile surfaces.
+
+The login-cookie correction and account-deletion endpoint correction require the backend/frontend CI and deployment pipeline to pass before they are considered closed. Production remains a separate verification gate because the published deployment is still on `main`.
