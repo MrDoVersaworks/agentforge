@@ -4,9 +4,31 @@ import { useState, useCallback } from 'react';
 import api from '@/lib/api';
 import type { Agent, CreateAgentPayload, UpdateAgentPayload } from '@/types';
 
-// ================================================================
-// useAgents — Agent CRUD operations
-// ================================================================
+interface AgentApiRecord {
+  id: string;
+  user_id: string;
+  name: string;
+  system_prompt: string;
+  temperature: number;
+  document_count?: number;
+  chunk_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+function mapAgent(record: AgentApiRecord): Agent {
+  return {
+    id: record.id,
+    userId: record.user_id,
+    name: record.name,
+    systemPrompt: record.system_prompt,
+    temperature: record.temperature,
+    documentCount: record.document_count ?? 0,
+    chunkCount: record.chunk_count ?? 0,
+    createdAt: record.created_at,
+    updatedAt: record.updated_at,
+  };
+}
 
 export function useAgents() {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -16,7 +38,7 @@ export function useAgents() {
     setIsLoading(true);
     try {
       const { data } = await api.get('/agents');
-      setAgents(data.data?.agents ? data.data?.agents : []);
+      setAgents((data.data?.agents ?? []).map(mapAgent));
     } catch {
       setAgents([]);
     } finally {
@@ -25,15 +47,23 @@ export function useAgents() {
   }, []);
 
   const createAgent = useCallback(async (payload: CreateAgentPayload): Promise<Agent> => {
-    const { data } = await api.post('/agents', payload);
-    const newAgent = data.data?.agent;
+    const { data } = await api.post('/agents', {
+      name: payload.name,
+      system_prompt: payload.systemPrompt,
+      temperature: payload.temperature ?? 0.7,
+    });
+    const newAgent = mapAgent(data.data.agent);
     setAgents((prev) => [newAgent, ...prev]);
     return newAgent;
   }, []);
 
   const updateAgent = useCallback(async (id: string, payload: UpdateAgentPayload): Promise<Agent> => {
-    const { data } = await api.patch(`/agents/${id}`, payload);
-    const updated = data.data?.agent;
+    const { data } = await api.patch(`/agents/${id}`, {
+      ...(payload.name !== undefined ? { name: payload.name } : {}),
+      ...(payload.systemPrompt !== undefined ? { system_prompt: payload.systemPrompt } : {}),
+      ...(payload.temperature !== undefined ? { temperature: payload.temperature } : {}),
+    });
+    const updated = mapAgent(data.data.agent);
     setAgents((prev) => prev.map((a) => (a.id === id ? updated : a)));
     return updated;
   }, []);
