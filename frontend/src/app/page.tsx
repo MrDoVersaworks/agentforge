@@ -273,9 +273,13 @@ export default function LandingPage() {
             <span className="landing-logo-text">AgentForge</span>
           </div>
           <div className="landing-nav-actions">
+            <button className="btn btn-ghost" onClick={() => router.push('/login')}>
+              Sign In
+            </button>
             <button className="btn btn-primary" onClick={() => router.push('/register')}>
               Start Building
             </button>
+          </div>
           </div>
         </div>
       </nav>
