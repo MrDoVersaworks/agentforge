@@ -1,13 +1,17 @@
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
+import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import { config } from '../config/index.js';
 import { jwtBlocklist } from '../utils/blocklist.js';
+import { db } from '../db/connection.js';
+import { refreshTokens } from '../db/schema.js';
 import { logger } from '../utils/logger.js';
 
 const userPayloadSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email(),
+  session_id: z.string().uuid(),
 });
 
 function rejectAuthentication(
@@ -53,11 +57,11 @@ function isTokenBlocklisted(token: string): boolean {
   return jwtBlocklist.has(signature);
 }
 
-export function authMiddleware(
+export async function authMiddleware(
   req: Request,
   res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   const token = requireBearerToken(req, res);
   if (token === null) {
     return;
@@ -74,7 +78,29 @@ export function authMiddleware(
 
   try {
     const decoded = jwt.verify(token, config.JWT_ACCESS_SECRET);
-    req.user = userPayloadSchema.parse(decoded);
+    const user = userPayloadSchema.parse(decoded);
+    const activeSession = await db
+      .select({ id: refreshTokens.id })
+      .from(refreshTokens)
+      .where(
+        and(
+          eq(refreshTokens.session_id, user.session_id),
+          isNull(refreshTokens.revoked_at),
+          gt(refreshTokens.expires_at, sql.raw('CURRENT_TIMESTAMP'))
+        )
+      )
+      .limit(1);
+
+    if (activeSession.length === 0) {
+      logger.warn('AUTH', 'Access denied: durable session is no longer active');
+      rejectAuthentication(
+        res,
+        '[ERR_AUTH_SESSION_INVALID] Session invalidated. Please log in again.'
+      );
+      return;
+    }
+
+    req.user = user;
     next();
   } catch (error: unknown) {
     if (error instanceof jwt.TokenExpiredError) {
