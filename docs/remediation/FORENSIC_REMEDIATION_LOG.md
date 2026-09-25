@@ -197,3 +197,18 @@ A repository-wide code search on the remediation head found no A2A scripts, agen
 CI run 64 reached the backend type check, fresh pgvector migration smoke test, backend contract tests, frontend type check, and frontend production build successfully. The public Playwright job remained in progress during this audit pass, so it is not treated as a passed browser regression.
 
 Main remains untouched. No remediation finding is being called fully closed solely from static inspection or successful compilation.
+
+
+### Automated production migration execution
+
+Original deployment risk: migration files could be present in source control and pass a fresh-database CI smoke test while a production backend started against an older schema. A Vercel frontend deployment alone does not execute the backend migration command.
+
+Intended behavior: every backend deployment/startup must apply all tracked Drizzle migrations before serving application traffic, using the deployment environment's existing DATABASE_URL secret. No database credential is stored in the repository.
+
+Implementation: the backend production start command now runs the compiled migration entrypoint first (node dist/db/migrate.js) and only starts the API after migrations succeed. CI also performs a backend production build before its migration smoke test, so the same compiled migration entrypoint is part of the build artifact. The README deployment/setup instructions now use the tracked migration command instead of schema push.
+
+Preserved behavior: migrations remain versioned and idempotent through Drizzle's migration journal; application startup is refused when a migration fails rather than serving against an unverified schema. The migration command continues to create/verify pgvector before applying the tracked migration set.
+
+Positive proof: CI must continue to pass the backend build and fresh PostgreSQL + pgvector migration smoke test. The production start path is now deterministic and secret-free from source control.
+
+Regression proof required for final closure: deploy the backend through its actual production host with its configured DATABASE_URL, verify startup applies the pending migration(s), then verify API health and application flows. This remediation does not claim that the live production database has already been migrated; it establishes the automated path that will perform the migration when the backend deployment/start occurs.
