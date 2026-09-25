@@ -1026,3 +1026,51 @@ body {
     transition-duration: 0.001ms !important;
   }
 }
+
+.policy-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(18px);
+}
+.policy-modal {
+  width: min(100%, 520px);
+  padding: 30px;
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+.policy-modal h3 {
+  margin: 0 0 10px;
+  font-size: 1.35rem;
+  letter-spacing: -0.025em;
+}
+.policy-modal-copy {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+.policy-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+@media (max-width: 520px) {
+  .policy-modal {
+    padding: 22px;
+    border-radius: 16px;
+  }
+  .policy-modal-actions {
+    flex-direction: column-reverse;
+  }
+  .policy-modal-actions .btn {
+    width: 100%;
+  }
+}
