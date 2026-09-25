@@ -38,6 +38,7 @@ export default function SettingsPage() {
   // ── Account Deletion States ──
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
 
   // ── Hydrate forms with user info ──
   useEffect(() => {
@@ -128,8 +129,9 @@ export default function SettingsPage() {
   const handleDeleteAccount = async () => {
     setDeletingAccount(true);
     try {
-      await api.delete('/settings/account');
+      await api.delete('/auth/account', { data: { password: deletePassword } });
       addToast('success', 'Your account has been permanently deleted.');
+      setDeletePassword('');
       await logout();
       router.push('/login');
     } catch (err: unknown) {
@@ -344,11 +346,21 @@ export default function SettingsPage() {
             <p>
               This permanently removes your account, agents, documents, API credentials, and conversation history. This cannot be undone.
             </p>
+            <label className="delete-password-label" htmlFor="delete-account-password">Enter your password to confirm</label>
+            <input
+              id="delete-account-password"
+              className="input-field"
+              type="password"
+              value={deletePassword}
+              onChange={(event) => setDeletePassword(event.target.value)}
+              autoComplete="current-password"
+              placeholder="Your account password"
+            />
             <div className="delete-modal-actions">
               <button type="button" className="btn btn-secondary" disabled={deletingAccount} onClick={() => setShowDeleteAccount(false)}>
                 Keep Account
               </button>
-              <button type="button" className="btn btn-danger" disabled={deletingAccount} onClick={() => { setShowDeleteAccount(false); void handleDeleteAccount(); }}>
+              <button type="button" className="btn btn-danger" disabled={deletingAccount || !deletePassword} onClick={() => { setShowDeleteAccount(false); void handleDeleteAccount(); }}>
                 {deletingAccount ? 'Deleting…' : 'Delete Permanently'}
               </button>
             </div>
@@ -388,6 +400,7 @@ export default function SettingsPage() {
         }
         .delete-modal h2 { font-size: 1.15rem; font-weight: 750; margin-bottom: 8px; }
         .delete-modal p { color: var(--text-secondary); font-size: .88rem; line-height: 1.65; }
+        .delete-password-label { display: block; margin-top: 20px; margin-bottom: 7px; font-size: .78rem; font-weight: 650; color: var(--text-primary); }
         .delete-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
         @media (max-width: 560px) {
           .delete-modal-actions { flex-direction: column-reverse; }
