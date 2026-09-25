@@ -524,64 +524,19 @@ export default function LandingPage() {
 
       {/* ── Policy Acceptance Modal for Demo Sandbox ── */}
       {showPolicyModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 100,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1rem',
-          backgroundColor: 'rgba(8, 10, 16, 0.85)',
-          backdropFilter: 'blur(12px)',
-        }}>
-          <div style={{
-            width: '100%',
-            maxWidth: '500px',
-            backgroundColor: 'rgba(18, 18, 30, 0.95)',
-            border: '1px solid rgba(139, 92, 246, 0.2)',
-            borderRadius: '1.25rem',
-            padding: '1.75rem',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
-            color: '#fff',
-          }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.75rem', color: '#fff' }}>
-              Terms of Service &amp; Usage Policy
-            </h3>
-            <p style={{ fontSize: '0.875rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+        <div className="policy-modal-backdrop">
+          <div className="policy-modal" role="dialog" aria-modal="true" aria-labelledby="policy-modal-title">
+            <p className="eyebrow">Before you continue</p>
+            <h3 id="policy-modal-title">Terms of Service and Usage Policy</h3>
+            <p className="policy-modal-copy">
               To access the AgentForge Interactive Sandbox, please confirm that you agree to our Platform Terms of Service, Privacy Policy, and Responsible AI Usage guidelines.
             </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button
-                onClick={() => setShowPolicyModal(false)}
-                style={{
-                  padding: '0.6rem 1.2rem',
-                  borderRadius: '0.75rem',
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  color: '#cbd5e1',
-                  fontWeight: 600,
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                }}
-              >
+            <div className="policy-modal-actions">
+              <button className="btn btn-secondary" onClick={() => setShowPolicyModal(false)}>
                 Decline
               </button>
-              <button
-                onClick={confirmDemoSandbox}
-                style={{
-                  padding: '0.6rem 1.5rem',
-                  borderRadius: '0.75rem',
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-                  border: 'none',
-                  color: '#fff',
-                  fontWeight: 700,
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(139, 92, 246, 0.35)',
-                }}
-              >
-                Accept &amp; Launch Sandbox
+              <button className="btn btn-primary" onClick={confirmDemoSandbox}>
+                Accept and Launch Sandbox
               </button>
             </div>
           </div>
