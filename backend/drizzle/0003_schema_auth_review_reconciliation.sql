@@ -17,3 +17,5 @@ ALTER TABLE IF EXISTS "system_settings" ADD COLUMN IF NOT EXISTS "privacy_policy
 ALTER TABLE IF EXISTS "system_settings" ADD COLUMN IF NOT EXISTS "terms_of_service_content" text;
 --> statement-breakpoint
 ALTER TABLE IF EXISTS "platform_reviews" ADD COLUMN IF NOT EXISTS "status" varchar(20) DEFAULT 'pending' NOT NULL;
+--> statement-breakpoint
+UPDATE "platform_reviews" SET "status" = 'approved' WHERE "status" = 'pending';
