@@ -1,17 +1,43 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import api, { getAccessToken } from '@/lib/api';
+import api, { getAccessToken, getApiBaseUrl } from '@/lib/api';
 import type { Conversation, Message } from '@/types';
-
-// ================================================================
-// useChat — Conversation management + RAG streaming
-// ================================================================
 
 if (!process.env.NEXT_PUBLIC_API_URL) {
   console.warn('[WARN] NEXT_PUBLIC_API_URL is not defined in the environment.');
 }
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+const API_BASE_URL = getApiBaseUrl();
+
+interface ConversationApiRecord {
+  id: string;
+  agent_id: string;
+  title: string;
+  created_at: string;
+}
+
+interface MessageApiRecord {
+  id: string;
+  conversation_id: string;
+  role: 'user' | 'model';
+  content: string;
+  created_at: string;
+}
+
+const mapConversation = (record: ConversationApiRecord): Conversation => ({
+  id: record.id,
+  agentId: record.agent_id,
+  title: record.title,
+  createdAt: record.created_at,
+});
+
+const mapMessage = (record: MessageApiRecord): Message => ({
+  id: record.id,
+  conversationId: record.conversation_id,
+  role: record.role,
+  content: record.content,
+  createdAt: record.created_at,
+});
 
 export function useChat(agentId: string) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -21,12 +47,11 @@ export function useChat(agentId: string) {
   const [isStreaming, setIsStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  // ── Fetch all conversations for this agent ──
   const fetchConversations = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data } = await api.get(`/chat/${agentId}/conversations`);
-      setConversations(data.data ? data.data : []);
+      const { data } = await api.get(`/chat/conversations/${agentId}`);
+      setConversations((data.data?.conversations ?? []).map(mapConversation));
     } catch {
       setConversations([]);
     } finally {
@@ -34,15 +59,14 @@ export function useChat(agentId: string) {
     }
   }, [agentId]);
 
-  // ── Load messages for a conversation ──
   const loadConversation = useCallback(
     async (conversationId: string) => {
       setIsLoading(true);
       try {
         const { data } = await api.get(
-          `/chat/${agentId}/conversations/${conversationId}/messages`
+          `/chat/conversations/${conversationId}/messages`
         );
-        setMessages(data.data ? data.data : []);
+        setMessages((data.data?.messages ?? []).map(mapMessage));
         const found = conversations.find((c) => c.id === conversationId);
         setCurrentConversation(found ? found : null);
       } catch {
@@ -51,31 +75,40 @@ export function useChat(agentId: string) {
         setIsLoading(false);
       }
     },
-    [agentId, conversations]
+    [conversations]
   );
 
-  // ── Send a message (streaming SSE) ──
   const sendMessage = useCallback(
     async (content: string, conversationId?: string) => {
-      // Optimistic: add user message immediately
+      let activeConversationId = conversationId;
+
+      if (!activeConversationId) {
+        const { data } = await api.post('/chat/conversations', {
+          agent_id: agentId,
+          title: content.slice(0, 50) || 'New Chat',
+        });
+        const createdConversation = mapConversation(data.data.conversation);
+        activeConversationId = createdConversation.id;
+        setConversations((prev) => [createdConversation, ...prev]);
+        setCurrentConversation(createdConversation);
+      }
+
       const tempUserMsg: Message = {
         id: `temp-${Date.now()}`,
-        conversationId: conversationId ? conversationId : '',
+        conversationId: activeConversationId,
         role: 'user',
         content,
         createdAt: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, tempUserMsg]);
 
-      // Prepare streaming
       setIsStreaming(true);
       abortRef.current = new AbortController();
 
-      // Add an empty model message to stream into
       const tempModelId = `stream-${Date.now()}`;
       const tempModelMsg: Message = {
         id: tempModelId,
-        conversationId: conversationId ? conversationId : '',
+        conversationId: activeConversationId,
         role: 'model',
         content: '',
         createdAt: new Date().toISOString(),
@@ -84,19 +117,22 @@ export function useChat(agentId: string) {
 
       try {
         const token = getAccessToken();
-        const response = await fetch(`${API_BASE_URL}/chat/${agentId}/stream`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            message: content,
-            ...(conversationId ? { conversationId } : {}),
-          }),
-          signal: abortRef.current.signal,
-        });
+        const response = await fetch(
+          `${API_BASE_URL}/chat/conversations/${activeConversationId}/messages`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              content,
+              stream: true,
+            }),
+            signal: abortRef.current.signal,
+          }
+        );
 
         if (!response.ok) {
           throw new Error(`Stream failed: ${response.status}`);
@@ -114,51 +150,33 @@ export function useChat(agentId: string) {
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
-          buffer = lines.pop() ? lines.pop()! : '';
+          const incompleteLine = lines.pop();
+          buffer = incompleteLine ?? '';
 
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const payload = line.slice(6).trim();
-              if (payload === '[DONE]') continue;
+            if (!line.startsWith('data: ')) continue;
 
-              try {
-                const parsed = JSON.parse(payload);
-                if (parsed.type === 'chunk') {
-                  setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === tempModelId
-                        ? { ...m, content: m.content + parsed.content }
-                        : m
-                    )
-                  );
-                } else if (parsed.type === 'meta') {
-                  // Meta event: contains conversationId for new conversations
-                  if (parsed.conversationId && !conversationId) {
-                    setCurrentConversation({
-                      id: parsed.conversationId,
-                      agentId,
-                      title: parsed.title ? parsed.title : content.slice(0, 50),
-                      createdAt: new Date().toISOString(),
-                    });
-                    // Update temp message conversation IDs
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.conversationId === ''
-                          ? { ...m, conversationId: parsed.conversationId }
-                          : m
-                      )
-                    );
-                  }
-                }
-              } catch {
-                // Non-JSON line, skip
+            const payload = line.slice(6).trim();
+            if (payload === '[DONE]') continue;
+
+            try {
+              const parsed = JSON.parse(payload);
+              if (parsed.type === 'chunk' && typeof parsed.content === 'string') {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === tempModelId
+                      ? { ...m, content: m.content + parsed.content }
+                      : m
+                  )
+                );
               }
+            } catch {
+              // Non-JSON line, skip.
             }
           }
         }
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
-          // Replace the streaming message with an error
           setMessages((prev) =>
             prev.map((m) =>
               m.id === tempModelId
@@ -175,26 +193,23 @@ export function useChat(agentId: string) {
     [agentId]
   );
 
-  // ── Stop streaming ──
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();
     setIsStreaming(false);
   }, []);
 
-  // ── Delete a conversation ──
   const deleteConversation = useCallback(
     async (conversationId: string) => {
-      await api.delete(`/chat/${agentId}/conversations/${conversationId}`);
+      await api.delete(`/chat/conversations/${conversationId}`);
       setConversations((prev) => prev.filter((c) => c.id !== conversationId));
       if (currentConversation?.id === conversationId) {
         setCurrentConversation(null);
         setMessages([]);
       }
     },
-    [agentId, currentConversation]
+    [currentConversation]
   );
 
-  // ── Start a new conversation (clear state) ──
   const newConversation = useCallback(() => {
     setCurrentConversation(null);
     setMessages([]);
