@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -76,16 +77,27 @@ export default function LoginPage() {
 
             <div className="auth-field">
               <label className="input-label" htmlFor="login-password">Password</label>
-              <input
-                id="login-password"
-                type="password"
-                className="input-field"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
+              <div className="password-field">
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  className="input-field password-input"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </div>
 
             <button
@@ -173,6 +185,23 @@ export default function LoginPage() {
           display: flex;
           flex-direction: column;
         }
+        .password-field { position: relative; }
+        .password-input { padding-right: 72px; }
+        .password-toggle {
+          position: absolute;
+          right: 10px;
+          top: 50%;
+          transform: translateY(-50%);
+          border: 0;
+          background: transparent;
+          color: var(--text-secondary);
+          font: inherit;
+          font-size: 0.75rem;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 6px 8px;
+        }
+        .password-toggle:hover { color: var(--text-primary); }
         .auth-error {
           padding: 10px 14px;
           background: rgba(251, 113, 133, 0.1);
