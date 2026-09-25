@@ -1,12 +1,7 @@
 import { spawnSync } from 'node:child_process';
-import { resolve } from 'node:path';
 
-const frontendDir = resolve(process.cwd());
-const backendDir = resolve(frontendDir, '../backend');
-
-function run(command, args, cwd) {
+function run(command, args) {
   const result = spawnSync(command, args, {
-    cwd,
     stdio: 'inherit',
     env: process.env,
   });
@@ -15,20 +10,9 @@ function run(command, args, cwd) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-if (process.env.VERCEL_ENV === 'production') {
-  if (!process.env.DATABASE_URL) {
-    console.error('[ERR_PRODUCTION_DATABASE_URL_MISSING] DATABASE_URL is required for the production migration gate.');
-    process.exit(1);
-  }
-
-  console.log('[DATABASE] Production deployment: installing backend migration dependencies.');
-  run('npm', ['ci'], backendDir);
-
-  console.log('[DATABASE] Production deployment: applying committed migrations.');
-  run('npm', ['run', 'db:migrate'], backendDir);
-} else {
-  console.log('[DATABASE] Non-production deployment: skipping production database migrations.');
-}
-
+// The production database belongs to the backend deployment. The frontend
+// build must never require or access DATABASE_URL. Production migrations are
+// executed by backend/scripts/vercel-build.mjs in the backend Vercel project.
+console.log('[DATABASE] Frontend deployment: database migrations are owned by the backend deployment.');
 console.log('[BUILD] Building AgentForge frontend.');
-run('npx', ['next', 'build'], frontendDir);
+run('npx', ['next', 'build']);
