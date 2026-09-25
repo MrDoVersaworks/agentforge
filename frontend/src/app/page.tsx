@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { PlatformReviews } from '@/components/PlatformReviews';
 import { UnifiedFooter } from '@/components/UnifiedFooter';
+import api, { setAccessToken } from '@/lib/api';
 
 // ================================================================
 // AgentForge — Landing Page
@@ -238,19 +239,12 @@ export default function LandingPage() {
     setIsDemoLoading(true);
     setDemoError('');
 
-    const demoEmail = 'guest@sandbox.agentforge.dev';
-    const demoPassword = 'SandboxDemo2026!';
-
     try {
-      await login(demoEmail, demoPassword);
+      const { data } = await api.post('/auth/sandbox');
+      setAccessToken(data.data.accessToken);
       router.push('/dashboard');
     } catch {
-      try {
-        await register(demoEmail, demoPassword, 'Sandbox Guest');
-        router.push('/dashboard');
-      } catch {
-        setDemoError('Failed to initialize sandbox. Please try registering manually.');
-      }
+      setDemoError('Failed to initialize sandbox. Please try registering manually.');
     } finally {
       setIsDemoLoading(false);
     }
