@@ -456,3 +456,11 @@ Production deployment must reconcile the actual Vercel production DATABASE_URL w
 
 ### Proof requirements
 A remediation deployment is not considered proven until Vercel build logs show the production migration gate executing against the production environment and completing before the frontend build. The deployment must also be checked for READY status, and runtime smoke tests should be performed after release.
+
+
+### Vercel backend deployment correction
+The first implementation placed the production migration gate in the frontend build. Inspection of the live Vercel backend build logs showed that the backend project uses a legacy builds entry in backend/vercel.json, which caused Vercel Project Build and Development Settings to be ignored. The production backend deployment therefore needed its own explicit build gate.
+
+The remediation now moves the authoritative gate into the backend Vercel deployment path: the backend package build invokes backend/scripts/vercel-build.mjs, and the legacy builds/routes configuration is removed in favor of Vercel's Express framework deployment. Production runs the committed migration runner before TypeScript compilation; non-production deployments skip production migration. The frontend gate remains defensive, but the backend deployment is the primary production database reconciliation point.
+
+Verification requirement: the next backend production build must show the migration gate before the backend build in Vercel build logs. Do not treat the configuration as proven until that ordering is observed.
