@@ -4,6 +4,7 @@
 
 // ── Authentication ──
 export const REFRESH_COOKIE_NAME = 'agentforge_refresh_token';
+export const CSRF_COOKIE_NAME = 'agentforge_csrf_token';
 export const REFRESH_TOKEN_EXPIRY_DAYS = 7;
 export const ACCESS_TOKEN_EXPIRY = '15m';
 export const BCRYPT_SALT_ROUNDS = 10;
