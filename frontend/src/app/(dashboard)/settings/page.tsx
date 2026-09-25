@@ -37,6 +37,7 @@ export default function SettingsPage() {
 
   // ── Account Deletion States ──
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
 
   // ── Hydrate forms with user info ──
   useEffect(() => {
@@ -125,11 +126,6 @@ export default function SettingsPage() {
 
   // ── Account Vaporization ──
   const handleDeleteAccount = async () => {
-    const doubleConfirm = confirm(
-      '🚨 WARNING: This action is permanent and irreversible!\n\nAll your custom agents, uploaded document indexes, vector chunks, and conversation histories will be completely vaporized. Do you wish to proceed?'
-    );
-    if (!doubleConfirm) return;
-
     setDeletingAccount(true);
     try {
       await api.delete('/settings/account');
@@ -331,16 +327,73 @@ export default function SettingsPage() {
                 type="button"
                 className="btn btn-danger"
                 disabled={deletingAccount}
-                onClick={handleDeleteAccount}
+                onClick={() => setShowDeleteAccount(true)}
               >
-                {deletingAccount ? 'Vaporizing...' : 'Vaporize Account'}
+                Vaporize Account
               </button>
             </div>
           </div>
         </div>
       </div>
 
+      {showDeleteAccount && (
+        <div className="delete-modal-backdrop" role="presentation" onClick={() => !deletingAccount && setShowDeleteAccount(false)}>
+          <section className="delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-account-title" onClick={(event) => event.stopPropagation()}>
+            <div className="delete-modal-icon" aria-hidden="true">!</div>
+            <h2 id="delete-account-title">Delete your account?</h2>
+            <p>
+              This permanently removes your account, agents, documents, API credentials, and conversation history. This cannot be undone.
+            </p>
+            <div className="delete-modal-actions">
+              <button type="button" className="btn btn-secondary" disabled={deletingAccount} onClick={() => setShowDeleteAccount(false)}>
+                Keep Account
+              </button>
+              <button type="button" className="btn btn-danger" disabled={deletingAccount} onClick={() => { setShowDeleteAccount(false); void handleDeleteAccount(); }}>
+                {deletingAccount ? 'Deleting…' : 'Delete Permanently'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       <style jsx>{`
+        .delete-modal-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 100;
+          display: grid;
+          place-items: center;
+          padding: 20px;
+          background: rgba(3, 5, 12, 0.72);
+          backdrop-filter: blur(10px);
+        }
+        .delete-modal {
+          width: min(100%, 480px);
+          padding: 28px;
+          border: 1px solid rgba(251, 113, 133, 0.22);
+          border-radius: 20px;
+          background: var(--surface, #10131d);
+          box-shadow: 0 24px 80px rgba(0,0,0,.35);
+        }
+        .delete-modal-icon {
+          width: 36px;
+          height: 36px;
+          display: grid;
+          place-items: center;
+          margin-bottom: 16px;
+          border-radius: 50%;
+          background: rgba(251, 113, 133, 0.12);
+          color: var(--accent-rose);
+          font-weight: 800;
+        }
+        .delete-modal h2 { font-size: 1.15rem; font-weight: 750; margin-bottom: 8px; }
+        .delete-modal p { color: var(--text-secondary); font-size: .88rem; line-height: 1.65; }
+        .delete-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+        @media (max-width: 560px) {
+          .delete-modal-actions { flex-direction: column-reverse; }
+          .delete-modal-actions .btn { width: 100%; }
+        }
+
         .settings-page {
           width: 100%;
         }
