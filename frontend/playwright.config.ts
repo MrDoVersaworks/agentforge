@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 import { PLAYWRIGHT_TIMEOUT_MS, PLAYWRIGHT_VIEWPORT } from './src/constants/playwright';
 
+const PUBLIC_ONLY = process.env.PLAYWRIGHT_PUBLIC_ONLY === '1';
+
 let PLAYWRIGHT_BASE_URL = 'http://localhost:3003';
 if (process.env.PLAYWRIGHT_BASE_URL !== undefined && process.env.PLAYWRIGHT_BASE_URL.trim() !== '') {
   PLAYWRIGHT_BASE_URL = process.env.PLAYWRIGHT_BASE_URL.trim();
@@ -26,18 +28,25 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: [
-    {
-      command: 'npm --prefix ../backend run dev',
-      url: 'http://localhost:5003/health',
-      reuseExistingServer: true,
-      timeout: PLAYWRIGHT_TIMEOUT_MS,
-    },
-    {
-      command: 'npm run dev',
-      url: PLAYWRIGHT_BASE_URL,
-      reuseExistingServer: true,
-      timeout: PLAYWRIGHT_TIMEOUT_MS,
-    },
-  ],
+  webServer: PUBLIC_ONLY
+    ? [{
+        command: 'npm run dev',
+        url: PLAYWRIGHT_BASE_URL,
+        reuseExistingServer: true,
+        timeout: PLAYWRIGHT_TIMEOUT_MS,
+      }]
+    : [
+        {
+          command: 'npm --prefix ../backend run dev',
+          url: 'http://localhost:5003/health',
+          reuseExistingServer: true,
+          timeout: PLAYWRIGHT_TIMEOUT_MS,
+        },
+        {
+          command: 'npm run dev',
+          url: PLAYWRIGHT_BASE_URL,
+          reuseExistingServer: true,
+          timeout: PLAYWRIGHT_TIMEOUT_MS,
+        },
+      ],
 });
