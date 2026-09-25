@@ -431,3 +431,28 @@ The login-cookie correction and account-deletion endpoint correction require the
 - The remediation branch added that fix after the production-login investigation: login now uses the same production cookie options as refresh and sets the CSRF cookie required by cookie-authenticated refresh.
 - This is not a duplicate of an existing `main` fix. The branch is still separate from `main`.
 - PR #1 is open/draft and unmerged. No remediation branch changes have been merged into `main`.
+
+
+## Production database migration gate
+
+### Original behavior
+The GitHub Actions migration smoke test used the disposable pgvector service database postgresql://postgres:postgres@localhost:5432/ci_db. That validates committed migrations against a clean PostgreSQL/pgvector database but does not reconcile the Vercel production database. The Vercel backend is deployed as a serverless function and therefore does not execute the backend package's npm start migration command as part of the frontend production build.
+
+### Intended remediation behavior
+Production deployment must reconcile the actual Vercel production DATABASE_URL with the committed Drizzle migrations before the frontend build is allowed to succeed. Non-production Vercel builds must not mutate production. The migration journal remains the source of truth, so an already-current database performs a state check without reapplying migrations. Concurrent production builds must not race migrations.
+
+### Behavior that must remain
+- GitHub CI continues to use an isolated PostgreSQL/pgvector database for migration validation.
+- Production credentials remain in Vercel and are not copied into GitHub Actions.
+- Preview and local builds do not run production migrations.
+- Only committed migration files are applied.
+- A migration failure fails the production deployment rather than publishing incompatible application code.
+- Existing application functionality is unchanged by the migration gate.
+
+### Implementation
+- frontend/scripts/vercel-build.mjs checks VERCEL_ENV and runs the backend migration only for production builds.
+- The production build requires DATABASE_URL, installs backend dependencies, runs npm run db:migrate, and only then runs next build.
+- backend/src/db/migrate.ts uses a PostgreSQL advisory session lock and keeps the same PostgreSQL client for Drizzle migration execution, preventing concurrent production migration races.
+
+### Proof requirements
+A remediation deployment is not considered proven until Vercel build logs show the production migration gate executing against the production environment and completing before the frontend build. The deployment must also be checked for READY status, and runtime smoke tests should be performed after release.
