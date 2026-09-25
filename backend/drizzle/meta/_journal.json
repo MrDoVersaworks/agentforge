@@ -29,6 +29,13 @@
       "when": 1790330418724,
       "tag": "0003_schema_auth_review_reconciliation",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790330500000,
+      "tag": "0004_remove_unused_resend_settings",
+      "breakpoints": true
     }
   ]
 }
