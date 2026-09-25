@@ -408,3 +408,26 @@ Public E2E coverage now checks:
 - Existing public review and mobile surfaces.
 
 The login-cookie correction and account-deletion endpoint correction require the backend/frontend CI and deployment pipeline to pass before they are considered closed. Production remains a separate verification gate because the published deployment is still on `main`.
+
+
+## Follow-up: Resend/contact trace and account-deletion UI refinement
+
+### Resend/contact trace
+- The authenticated user settings page contained a per-user Resend API-key field plus a notification email field.
+- The backend exposed storage/update/delete operations for those values, but no AgentForge source inspected on `audit-remediation` used the stored Resend credential to send an email.
+- The contact route currently stores submitted contact messages in the `contact_messages` table and the admin inbox can inspect that data. It does not invoke Resend.
+- The public footer's Contact action on the landing page is an external portfolio/developer link, not a contact-message form.
+- Therefore the Resend settings were not a working implementation of either owner contact notifications or agent-to-user offline notifications. They were dead configuration/storage rather than a functioning delivery feature.
+- Remediation removes the unused Resend API-key and notification-email settings from the user UI, API contracts, service, schema, and database through a tracked migration. The existing Contact link and contact-message storage/inbox behavior are not removed by this change.
+- Historical Resend credential data, if present in deployed databases, is removed by the migration because the feature has been explicitly determined to have no functioning delivery contract.
+
+### Account deletion UI
+- Existing intended behavior remains password-confirmed account deletion through `DELETE /api/auth/account`.
+- The UI was refined rather than functionally changed: clearer hierarchy, better modal proportions, aligned action buttons, mobile stacking, and password clearing when the modal is dismissed.
+- The deletion endpoint, password requirement, deletion consequences, and post-success logout/redirect remain unchanged.
+
+### Login branch/main clarification
+- `main` did not contain the later login cookie/CSRF remediation.
+- The remediation branch added that fix after the production-login investigation: login now uses the same production cookie options as refresh and sets the CSRF cookie required by cookie-authenticated refresh.
+- This is not a duplicate of an existing `main` fix. The branch is still separate from `main`.
+- PR #1 is open/draft and unmerged. No remediation branch changes have been merged into `main`.
