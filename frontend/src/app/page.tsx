@@ -204,8 +204,6 @@ export default function LandingPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading, login, register } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [isDemoLoading, setIsDemoLoading] = useState(false);
-  const [demoError, setDemoError] = useState('');
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const typedWord = useTypingEffect(
     ['Your Own Data', 'Legal Documents', 'Research Papers', 'Product Docs', 'Knowledge Bases'],
@@ -301,11 +299,8 @@ export default function LandingPage() {
             <span className="landing-logo-text">AgentForge</span>
           </div>
           <div className="landing-nav-actions">
-            <button className="btn btn-ghost" onClick={() => router.push('/login')}>
-              Sign In
-            </button>
             <button className="btn btn-primary" onClick={() => router.push('/register')}>
-              Get Started
+              Start Building
             </button>
           </div>
         </div>
