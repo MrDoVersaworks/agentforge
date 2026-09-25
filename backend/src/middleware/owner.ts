@@ -6,8 +6,8 @@ export function ownerMiddleware(
   res: Response,
   next: NextFunction
 ): void {
-  const authenticatedEmail = req.user?.email;
-  if (authenticatedEmail === undefined || authenticatedEmail.trim().length === 0) {
+  const authenticatedUserId = req.user?.id;
+  if (!authenticatedUserId) {
     res.status(401).json({
       success: false,
       error: {
@@ -17,8 +17,8 @@ export function ownerMiddleware(
     });
     return;
   }
-  const adminEmail = config.ADMIN_EMAIL || '';
-  if (authenticatedEmail.toLowerCase() !== adminEmail.toLowerCase()) {
+
+  if (!config.ADMIN_USER_ID || authenticatedUserId !== config.ADMIN_USER_ID) {
     res.status(403).json({
       success: false,
       error: {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { PlatformReviews } from '@/components/PlatformReviews';
@@ -8,7 +8,7 @@ import { UnifiedFooter } from '@/components/UnifiedFooter';
 
 // ================================================================
 // AgentForge — Landing Page
-// Interactive particle constellation + sandbox demo + split hero
+// Interactive particle constellation + split hero
 // ================================================================
 
 // ── Particle System (Canvas-based neural constellation) ──
@@ -201,10 +201,8 @@ function useTypingEffect(words: string[], typingSpeed: number, deletingSpeed: nu
 
 export default function LandingPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading, login, register } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [isDemoLoading, setIsDemoLoading] = useState(false);
-  const [demoError, setDemoError] = useState('');
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const typedWord = useTypingEffect(
     ['Your Own Data', 'Legal Documents', 'Research Papers', 'Product Docs', 'Knowledge Bases'],
@@ -223,38 +221,6 @@ export default function LandingPage() {
       router.push('/dashboard');
     }
   }, [isLoading, isAuthenticated, router]);
-
-  const [showPolicyModal, setShowPolicyModal] = useState(false);
-
-  // ── Sandbox Demo (auto-provision guest account with policy acceptance) ──
-  const openDemoSandboxModal = () => {
-    setDemoError('');
-    setShowPolicyModal(true);
-  };
-
-  const confirmDemoSandbox = useCallback(async () => {
-    setShowPolicyModal(false);
-    if (isDemoLoading) return;
-    setIsDemoLoading(true);
-    setDemoError('');
-
-    const demoEmail = 'guest@sandbox.agentforge.dev';
-    const demoPassword = 'SandboxDemo2026!';
-
-    try {
-      await login(demoEmail, demoPassword);
-      router.push('/dashboard');
-    } catch {
-      try {
-        await register(demoEmail, demoPassword, 'Sandbox Guest');
-        router.push('/dashboard');
-      } catch {
-        setDemoError('Failed to initialize sandbox. Please try registering manually.');
-      }
-    } finally {
-      setIsDemoLoading(false);
-    }
-  }, [isDemoLoading, login, register, router]);
 
   if (!mounted) return null;
 
@@ -311,7 +277,7 @@ export default function LandingPage() {
               Sign In
             </button>
             <button className="btn btn-primary" onClick={() => router.push('/register')}>
-              Get Started
+              Start Building
             </button>
           </div>
         </div>
@@ -345,30 +311,9 @@ export default function LandingPage() {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
-                Start Building - Free
-              </button>
-              <button
-                className="btn btn-secondary btn-lg"
-                onClick={openDemoSandboxModal}
-                disabled={isDemoLoading}
-              >
-                {isDemoLoading ? (
-                  <>
-                    <span className="spinner" style={{ width: 16, height: 16 }} />
-                    Provisioning...
-                  </>
-                ) : (
-                  <>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="5 3 19 12 5 21 5 3" />
-                    </svg>
-                    Demo Sandbox
-                  </>
-                )}
+                Start Building
               </button>
             </div>
-            {demoError && <p className="demo-error">{demoError}</p>}
-
             {/* Tech stack pills */}
             <div className="tech-pills">
               <span className="tech-pill">Next.js 14</span>
@@ -518,7 +463,7 @@ export default function LandingPage() {
         </div>
       </main>
 
-      <div style={{ position: 'relative', zIndex: 10, backgroundColor: 'rgba(8, 10, 16, 0.4)' }}>
+      <div className="reviews-shell">
         <PlatformReviews />
       </div>
 
@@ -527,72 +472,6 @@ export default function LandingPage() {
         techStack="Next.js & Express"
         contactLink="https://devpulse-zeta-six.vercel.app/"
       />
-
-      {/* ── Policy Acceptance Modal for Demo Sandbox ── */}
-      {showPolicyModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 100,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1rem',
-          backgroundColor: 'rgba(8, 10, 16, 0.85)',
-          backdropFilter: 'blur(12px)',
-        }}>
-          <div style={{
-            width: '100%',
-            maxWidth: '500px',
-            backgroundColor: 'rgba(18, 18, 30, 0.95)',
-            border: '1px solid rgba(139, 92, 246, 0.2)',
-            borderRadius: '1.25rem',
-            padding: '1.75rem',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
-            color: '#fff',
-          }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.75rem', color: '#fff' }}>
-              Terms of Service &amp; Usage Policy
-            </h3>
-            <p style={{ fontSize: '0.875rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-              To access the AgentForge Interactive Sandbox, please confirm that you agree to our Platform Terms of Service, Privacy Policy, and Responsible AI Usage guidelines.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button
-                onClick={() => setShowPolicyModal(false)}
-                style={{
-                  padding: '0.6rem 1.2rem',
-                  borderRadius: '0.75rem',
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  color: '#cbd5e1',
-                  fontWeight: 600,
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                }}
-              >
-                Decline
-              </button>
-              <button
-                onClick={confirmDemoSandbox}
-                style={{
-                  padding: '0.6rem 1.5rem',
-                  borderRadius: '0.75rem',
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-                  border: 'none',
-                  color: '#fff',
-                  fontWeight: 700,
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(139, 92, 246, 0.35)',
-                }}
-              >
-                Accept &amp; Launch Sandbox
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <style jsx>{`
         .landing-page {

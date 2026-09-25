@@ -31,10 +31,6 @@ export const users = pgTable('users', {
   gemini_key_iv: varchar('gemini_key_iv', { length: 64 }),
   gemini_key_tag: varchar('gemini_key_tag', { length: 64 }),
   gemini_model: varchar('gemini_model', { length: 100 }).default('gemini-2.5-flash'),
-  encrypted_resend_key: text('encrypted_resend_key'),
-  resend_key_iv: varchar('resend_key_iv', { length: 64 }),
-  resend_key_tag: varchar('resend_key_tag', { length: 64 }),
-  notification_email: varchar('notification_email', { length: 255 }),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -46,7 +42,9 @@ export const refreshTokens = pgTable('refresh_tokens', {
   id: uuid('id').defaultRandom().primaryKey(),
   user_id: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   token_hash: varchar('token_hash', { length: 255 }).notNull(),
+  session_id: uuid('session_id').notNull().defaultRandom(),
   expires_at: timestamp('expires_at', { withTimezone: true }).notNull(),
+  revoked_at: timestamp('revoked_at', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -154,6 +152,7 @@ export const platformReviews = pgTable('platform_reviews', {
   profession: varchar('profession', { length: 255 }),
   rating: real('rating').notNull().default(5),
   feedback: text('feedback').notNull(),
+  status: varchar('status', { length: 20 }).notNull().default('pending'),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

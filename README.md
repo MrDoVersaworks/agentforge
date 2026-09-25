@@ -29,7 +29,7 @@ AgentForge is tailored for:
 - **Autonomous Agent Builder:** Define custom names, system instructions, and generation temperatures (from deterministic `0` to creative `1.0`).
 - **RAG Ingestion Engine:** Upload files via a drag-and-drop glassmorphic UI. The system automatically splits files into chunks, calculates 768-dimension embeddings, and indexes them using pgvector.
 - **Real-Time Streaming Chat:** Engage in conversational threads with agents, experiencing low-latency, character-by-character token streaming with markdown rendering.
-- **Dark Glassmorphism UI:** Stunning aesthetic framework utilizing violet and cyan design tokens, optimized responsive layouts, and interactive canvas constellations.
+- **Adaptive product UI:** A restrained, system-typography interface with quiet surfaces, responsive layouts, light and dark themes, and purposeful motion.
 - **Sovereign Purge (Vaporization):** One-click account vaporization to completely erase all user metadata, custom agents, conversation history, and document vector embeddings from the server.
 
 ---
@@ -99,7 +99,7 @@ To run the automated E2E lifecycle test suite:
 # 1. Start the Backend Server (port 5003)
 cd backend
 npm install
-npm run db:push
+npm run db:migrate
 npm run dev
 
 # 2. Start the Frontend Server (port 3003)
@@ -108,7 +108,7 @@ npm install
 npm run dev
 
 # 3. Run the Playwright Suite
-npx playwright test tests/e2e/recording.spec.ts --project=chromium --headed
+npx playwright test tests/e2e/public-experience.spec.ts --project=chromium --headed
 ```
 *Note: Make sure your `backend/.env` contains your `DATABASE_URL` and a valid `GEMINI_API_KEY` for embedding calculation.*
 
@@ -129,7 +129,7 @@ npx playwright test tests/e2e/recording.spec.ts --project=chromium --headed
    cd agentforge/backend
    npm install
    # Copy .env.example to .env and configure DATABASE_URL + GEMINI_API_KEY
-   npm run db:push
+   npm run db:migrate
    npm run dev
    ```
 
@@ -148,6 +148,6 @@ npx playwright test tests/e2e/recording.spec.ts --project=chromium --headed
 AgentForge is built as part of a high-innovation portfolio series.
 
 **Architected by Oyewole Favour**  
-📧 Contact via the in-app **Contact Form** (accessible from the dashboard)  
-💼 [LinkedIn](https://www.linkedin.com/in/mrdoversaworks/)  
-🌐 [GitHub](https://github.com/MrDoVersaworks/)
+Contact via the in-app **Contact Form** (accessible from the dashboard)  
+LinkedIn: https://www.linkedin.com/in/mrdoversaworks/  
+GitHub: https://github.com/MrDoVersaworks/

@@ -171,6 +171,28 @@ router.get(
   })
 );
 
+router.patch(
+  '/reviews/:id',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const reviewStatus = z.object({ status: z.enum(['approved', 'rejected', 'pending']) }).parse(req.body);
+    const { platformReviews } = await import('../db/schema.js');
+    const [updated] = await db
+      .update(platformReviews)
+      .set({
+        status: reviewStatus.status,
+        updated_at: sql.raw('CURRENT_TIMESTAMP'),
+      })
+      .where(eq(platformReviews.id, req.params.id))
+      .returning();
+
+    if (updated === undefined) {
+      throw new AppError('[ERR_ADMIN_REVIEW_NOT_FOUND] Review not found.', 404);
+    }
+
+    res.status(200).json({ success: true, data: updated });
+  })
+);
+
 router.delete(
   '/reviews/:id',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {

@@ -26,24 +26,20 @@ export default function SettingsPage() {
   const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash');
   const [savingKey, setSavingKey] = useState(false);
 
-  // ── Resend / Notification States ──
-  const [resendKey, setResendKey] = useState('');
-  const [notificationEmail, setNotificationEmail] = useState('');
-  const [savingResend, setSavingResend] = useState(false);
-
   // ── Profile States ──
   const [name, setName] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
 
   // ── Account Deletion States ──
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
 
   // ── Hydrate forms with user info ──
   useEffect(() => {
     if (user) {
       setName(user.name ? user.name : '');
       setGeminiModel(user.geminiModel ? user.geminiModel : 'gemini-2.5-flash');
-      setNotificationEmail(user.notificationEmail ? user.notificationEmail : '');
     }
   }, [user]);
 
@@ -73,34 +69,6 @@ export default function SettingsPage() {
     }
   };
 
-  // ── Save Resend API Key & Notification Email ──
-  const handleSaveResend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingResend(true);
-
-    try {
-      if (resendKey.trim()) {
-        await api.post('/settings/resend-key', {
-          resend_key: resendKey.trim(),
-        });
-        setResendKey('');
-      }
-
-      if (notificationEmail.trim()) {
-        await api.patch('/settings', {
-          notification_email: notificationEmail.trim(),
-        });
-      }
-
-      await refreshUser();
-      addToast('success', 'Email notification settings updated.');
-    } catch (err: unknown) {
-      addToast('error', extractErrorMessage(err, 'Failed to update notification settings.'));
-    } finally {
-      setSavingResend(false);
-    }
-  };
-
   // ── Save Profile Name ──
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,17 +91,13 @@ export default function SettingsPage() {
     }
   };
 
-  // ── Account Vaporization ──
+  // ── Account deletion ──
   const handleDeleteAccount = async () => {
-    const doubleConfirm = confirm(
-      '🚨 WARNING: This action is permanent and irreversible!\n\nAll your custom agents, uploaded document indexes, vector chunks, and conversation histories will be completely vaporized. Do you wish to proceed?'
-    );
-    if (!doubleConfirm) return;
-
     setDeletingAccount(true);
     try {
-      await api.delete('/settings/account');
-      addToast('success', 'Your account has been successfully vaporized.');
+      await api.delete('/auth/account', { data: { password: deletePassword } });
+      addToast('success', 'Your account has been permanently deleted.');
+      setDeletePassword('');
       await logout();
       router.push('/login');
     } catch (err: unknown) {
@@ -157,7 +121,7 @@ export default function SettingsPage() {
       <div className="page-header">
         <div className="page-header-text">
           <h1>Global Settings</h1>
-          <p>Configure LLM credentials, email notifications, update account info, and manage data vaporization</p>
+          <p>Configure your model credentials, profile, and account</p>
         </div>
       </div>
 
@@ -214,58 +178,7 @@ export default function SettingsPage() {
             </form>
           </div>
 
-          {/* Card 2: Resend Email Notifications */}
-          <div className="glass settings-card">
-            <div className="card-header-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="amber-icon">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                <polyline points="22,6 12,13 2,6" />
-              </svg>
-              <h3>Email Notifications (Resend)</h3>
-            </div>
-            <p className="card-desc">
-              Configure your Resend API key for transactional email delivery (contact form alerts, system notifications). Your key is encrypted at rest using AES-256-GCM.
-            </p>
-
-            <form onSubmit={handleSaveResend}>
-              <div className="form-group">
-                <label className="input-label">Resend API Key</label>
-                <div className="key-input-wrapper">
-                  <input
-                    type="password"
-                    className="input-field"
-                    placeholder={user?.hasResendKey ? '••••••••••••••••••••••••••••••••' : 'Enter your Resend API Key'}
-                    value={resendKey}
-                    onChange={(e) => setResendKey(e.target.value)}
-                  />
-                  {user?.hasResendKey && (
-                    <span className="key-status-indicator active">
-                      <span className="active-dot" />
-                      Active Key Saved
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="input-label">Notification Email</label>
-                <input
-                  type="email"
-                  className="input-field"
-                  placeholder="admin@yourdomain.com"
-                  value={notificationEmail}
-                  onChange={(e) => setNotificationEmail(e.target.value)}
-                />
-                <span className="field-hint">Contact form submissions and system alerts will be forwarded to this address.</span>
-              </div>
-
-              <button type="submit" className="btn btn-primary" disabled={savingResend}>
-                {savingResend ? 'Saving...' : 'Save Notification Settings'}
-              </button>
-            </form>
-          </div>
-
-          {/* Card 3: Profile Setup */}
+          {/* Card 2: Profile Setup */}
           <div className="glass settings-card">
             <div className="card-header-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="cyan-icon">
@@ -324,23 +237,93 @@ export default function SettingsPage() {
 
             <div className="danger-action-row">
               <div className="action-text">
-                <h4>Vaporize Account Data</h4>
+                <h4>Delete Account & Data</h4>
                 <p>Delete your profile and permanently erase all custom AI agents, document chunks, and chat history.</p>
               </div>
               <button
                 type="button"
                 className="btn btn-danger"
                 disabled={deletingAccount}
-                onClick={handleDeleteAccount}
+                onClick={() => setShowDeleteAccount(true)}
               >
-                {deletingAccount ? 'Vaporizing...' : 'Vaporize Account'}
+                Delete Account
               </button>
             </div>
           </div>
         </div>
       </div>
 
+      {showDeleteAccount && (
+        <div className="delete-modal-backdrop" role="presentation" onClick={() => { if (!deletingAccount) { setShowDeleteAccount(false); setDeletePassword(''); } }}>
+          <section className="delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-account-title" onClick={(event) => event.stopPropagation()}>
+            <div className="delete-modal-icon" aria-hidden="true">!</div>
+            <h2 id="delete-account-title">Delete your account?</h2>
+            <p>
+              This permanently removes your account, agents, documents, API credentials, and conversation history. This cannot be undone.
+            </p>
+            <label className="delete-password-label" htmlFor="delete-account-password">Enter your password to confirm</label>
+            <input
+              id="delete-account-password"
+              className="input-field"
+              type="password"
+              value={deletePassword}
+              onChange={(event) => setDeletePassword(event.target.value)}
+              autoComplete="current-password"
+              placeholder="Your account password"
+            />
+            <div className="delete-modal-actions">
+              <button type="button" className="btn btn-secondary" disabled={deletingAccount} onClick={() => { setShowDeleteAccount(false); setDeletePassword(''); }}>
+                Keep Account
+              </button>
+              <button type="button" className="btn btn-danger" disabled={deletingAccount || !deletePassword} onClick={() => void handleDeleteAccount()}>
+                {deletingAccount ? 'Deleting…' : 'Delete Permanently'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       <style jsx>{`
+        .delete-modal-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 100;
+          display: grid;
+          place-items: center;
+          padding: 20px;
+          background: rgba(3, 5, 12, 0.72);
+          backdrop-filter: blur(10px);
+        }
+        .delete-modal {
+          width: min(100%, 500px);
+          padding: 32px;
+          border: 1px solid rgba(251, 113, 133, 0.22);
+          border-radius: 20px;
+          background: var(--surface, #10131d);
+          box-shadow: 0 24px 80px rgba(0,0,0,.35);
+        }
+        .delete-modal-icon {
+          width: 42px;
+          height: 42px;
+          display: grid;
+          place-items: center;
+          margin-bottom: 16px;
+          border-radius: 50%;
+          background: rgba(251, 113, 133, 0.12);
+          color: var(--accent-rose);
+          font-weight: 800;
+          border: 1px solid rgba(251, 113, 133, 0.18);
+        }
+        .delete-modal h2 { font-size: 1.15rem; font-weight: 750; margin-bottom: 8px; }
+        .delete-modal p { color: var(--text-secondary); font-size: .88rem; line-height: 1.65; }
+        .delete-password-label { display: block; margin-top: 20px; margin-bottom: 7px; font-size: .78rem; font-weight: 650; color: var(--text-primary); }
+        .delete-modal-actions { display: grid; grid-template-columns: 1fr 1.15fr; gap: 12px; margin-top: 24px; }
+        .delete-modal-actions .btn { min-height: 46px; }
+        @media (max-width: 560px) {
+          .delete-modal-actions { grid-template-columns: 1fr; }
+          .delete-modal-actions .btn { width: 100%; }
+        }
+
         .settings-page {
           width: 100%;
         }

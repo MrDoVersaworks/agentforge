@@ -19,10 +19,14 @@ export default function RegisterPage() {
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [success, setSuccess] = useState('');
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
     if (!termsAgreed) {
       setError('You must agree to the Terms of Service and Privacy Policy to proceed.');
@@ -41,7 +45,8 @@ export default function RegisterPage() {
     setIsSubmitting(true);
     try {
       await register(email, password, name);
-      router.push('/dashboard');
+      setSuccess('Your account has been created. Opening your workspace…');
+      window.setTimeout(() => router.push('/dashboard'), 350);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
@@ -77,7 +82,8 @@ export default function RegisterPage() {
 
           {/* ── Form ── */}
           <form className="auth-form" onSubmit={(e) => { void handleSubmit(e); }}>
-            {error && <div className="auth-error">{error}</div>}
+            {error && <div className="auth-error" role="alert">{error}</div>}
+            {success && <div className="auth-success" role="status">{success}</div>}
 
             <div className="auth-field">
               <label className="input-label" htmlFor="register-name">Full Name</label>
@@ -109,31 +115,41 @@ export default function RegisterPage() {
 
             <div className="auth-field">
               <label className="input-label" htmlFor="register-password">Password</label>
-              <input
-                id="register-password"
-                type="password"
-                className="input-field"
-                placeholder="Min. 8 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                autoComplete="new-password"
-              />
+              <div className="password-field">
+                <input
+                  id="register-password"
+                  type={showPassword ? 'text' : 'password'}
+                  className="input-field password-input"
+                  placeholder="Min. 8 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+                <button type="button" className="password-toggle" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </div>
 
             <div className="auth-field">
               <label className="input-label" htmlFor="register-confirm">Confirm Password</label>
-              <input
-                id="register-confirm"
-                type="password"
-                className="input-field"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                autoComplete="new-password"
-              />
+              <div className="password-field">
+                <input
+                  id="register-confirm"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  className="input-field password-input"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                />
+                <button type="button" className="password-toggle" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'} aria-pressed={showConfirmPassword}>
+                  {showConfirmPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </div>
 
             {/* Terms & Conditions Agreement Section */}
@@ -262,6 +278,32 @@ export default function RegisterPage() {
           display: flex;
           flex-direction: column;
         }
+        .auth-success {
+          padding: 10px 14px;
+          background: rgba(52, 211, 153, 0.1);
+          border: 1px solid rgba(52, 211, 153, 0.25);
+          border-radius: var(--radius-md);
+          color: var(--accent-emerald);
+          font-size: 0.82rem;
+          font-weight: 500;
+        }
+        .password-field { position: relative; }
+        .password-input { padding-right: 72px; }
+        .password-toggle {
+          position: absolute;
+          right: 10px;
+          top: 50%;
+          transform: translateY(-50%);
+          border: 0;
+          background: transparent;
+          color: var(--text-secondary);
+          font: inherit;
+          font-size: 0.75rem;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 6px 8px;
+        }
+        .password-toggle:hover { color: var(--text-primary); }
         .auth-error {
           padding: 10px 14px;
           background: rgba(251, 113, 133, 0.1);

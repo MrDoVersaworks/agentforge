@@ -10,6 +10,20 @@ jobs:
   backend-audit:
     name: Backend — Type Check
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ci_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: ./backend
@@ -27,6 +41,26 @@ jobs:
         env:
           JWT_SECRET: ci_secret_key_for_testing_purposes_only_32bytes
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci_db
+      - name: Production Build
+        run: npm run build
+        env:
+          JWT_ACCESS_SECRET: ci_access_secret_for_testing_32bytes
+          JWT_REFRESH_SECRET: ci_refresh_secret_for_testing_32bytes
+          AES_ENCRYPTION_KEY: 0000000000000000000000000000000000000000000000000000000000000000
+          CORS_ORIGIN: http://localhost:3003
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci_db
+          NODE_ENV: test
+      - name: Migration Smoke Test
+        run: npm run db:migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci_db
+          JWT_ACCESS_SECRET: ci_access_secret_for_testing_32bytes
+          JWT_REFRESH_SECRET: ci_refresh_secret_for_testing_32bytes
+          AES_ENCRYPTION_KEY: 0000000000000000000000000000000000000000000000000000000000000000
+          CORS_ORIGIN: http://localhost:3003
+          NODE_ENV: test
+      - name: Contract Tests
+        run: npm test
 
   frontend-audit:
     name: Frontend — Type Check
@@ -47,3 +81,32 @@ jobs:
         run: npx tsc --noEmit --skipLibCheck
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3000
+
+
+  frontend-build-and-e2e:
+    name: Frontend — Build and Public E2E
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
+      - run: npm install
+      - name: Production Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3004
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Public E2E
+        run: npx playwright test tests/e2e/public-experience.spec.ts --project=chromium
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3004
+          PLAYWRIGHT_PUBLIC_ONLY: '1'
+          PLAYWRIGHT_RETRIES: '0'

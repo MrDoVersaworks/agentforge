@@ -4,9 +4,23 @@ import { useState, useCallback } from 'react';
 import api from '@/lib/api';
 import type { KnowledgeDocument } from '@/types';
 
-// ================================================================
-// useKnowledge — Document upload & management
-// ================================================================
+interface KnowledgeDocumentApiRecord {
+  id: string;
+  agent_id: string;
+  filename: string;
+  chunk_count?: number;
+  created_at: string;
+}
+
+function mapDocument(record: KnowledgeDocumentApiRecord): KnowledgeDocument {
+  return {
+    id: record.id,
+    agentId: record.agent_id,
+    filename: record.filename,
+    chunkCount: record.chunk_count ?? 0,
+    createdAt: record.created_at,
+  };
+}
 
 export function useKnowledge(agentId: string) {
   const [documents, setDocuments] = useState<KnowledgeDocument[]>([]);
@@ -17,7 +31,7 @@ export function useKnowledge(agentId: string) {
     setIsLoading(true);
     try {
       const { data } = await api.get(`/knowledge/${agentId}/documents`);
-      setDocuments(data.data ? data.data : []);
+      setDocuments((data.data?.documents ?? []).map(mapDocument));
     } catch {
       setDocuments([]);
     } finally {
@@ -31,9 +45,9 @@ export function useKnowledge(agentId: string) {
       try {
         const { data } = await api.post(`/knowledge/${agentId}/documents`, {
           filename,
-          content,
+          content_text: content,
         });
-        const doc = data.data;
+        const doc = mapDocument(data.data.document);
         setDocuments((prev) => [doc, ...prev]);
         return doc;
       } finally {

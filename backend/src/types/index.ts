@@ -9,6 +9,7 @@ const DEFAULT_TEMPERATURE = 0.7;
 export interface UserPayload {
   id: string;
   email: string;
+  session_id: string;
 }
 
 declare module 'express-serve-static-core' {
@@ -40,11 +41,6 @@ export const geminiKeySchema = z.object({
 export const updateSettingsSchema = z.object({
   name: z.string().min(1, 'Name is required').optional(),
   gemini_model: z.enum(['gemini-2.5-flash', 'gemini-2.5-pro']).optional(),
-  notification_email: z.string().email('Invalid email address').optional(),
-});
-
-export const resendKeySchema = z.object({
-  resend_key: z.string().min(1, 'Resend API Key is required'),
 });
 
 // Agent DTOs

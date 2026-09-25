@@ -1,11 +1,12 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import { authMiddleware } from '../middleware/auth.js';
 import { authRateLimiter } from '../middleware/rateLimiter.js';
 import { validate } from '../middleware/validate.js';
 import { deleteAccountSchema, loginSchema, registerSchema } from '../types/index.js';
 import { config } from '../config/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { REFRESH_COOKIE_NAME, REFRESH_TOKEN_EXPIRY_DAYS } from '../constants/index.js';
+import { CSRF_COOKIE_NAME, REFRESH_COOKIE_NAME, REFRESH_TOKEN_EXPIRY_DAYS } from '../constants/index.js';
 import {
   registerUser,
   loginUser,
@@ -14,10 +15,46 @@ import {
   deleteUserAccount,
 } from '../services/auth.service.js';
 import { jwtBlocklist } from '../utils/blocklist.js';
+import { deleteAccountWithSessionInvalidation } from '../utils/accountDeletion.js';
 
 const router = Router();
 
-// POST /register
+function authCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: config.NODE_ENV === 'production',
+    sameSite: config.NODE_ENV === 'production' ? 'none' as const : 'strict' as const,
+    maxAge: REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+    path: '/',
+  };
+}
+
+function setCsrfCookie(res: Response): void {
+  res.cookie(CSRF_COOKIE_NAME, crypto.randomBytes(32).toString('hex'), {
+    httpOnly: false,
+    secure: config.NODE_ENV === 'production',
+    sameSite: config.NODE_ENV === 'production' ? 'none' as const : 'strict' as const,
+    maxAge: REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+    path: '/',
+  });
+}
+
+function requireCsrfForCookieAuth(req: Request, res: Response): boolean {
+  const refreshToken = req.cookies[REFRESH_COOKIE_NAME] as string | undefined;
+  if (!refreshToken) return true;
+  const cookieToken = req.cookies[CSRF_COOKIE_NAME] as string | undefined;
+  const headerToken = req.header('X-CSRF-Token');
+  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+    res.status(403).json({
+      success: false,
+      error: { code: 'ERR_CSRF_INVALID', message: 'CSRF validation failed.' },
+    });
+    return false;
+  }
+  return true;
+}
+
+
 router.post(
   '/register',
   authRateLimiter,
@@ -25,23 +62,14 @@ router.post(
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
       const body = req.body as { email: string; password: string; name: string };
-      const { email, password, name } = body;
-      const result = await registerUser({ email, password, name });
+      const result = await registerUser(body);
 
-      res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, {
-        httpOnly: true,
-        secure: config.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
-        path: '/',
-      });
+      res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, authCookieOptions());
+      setCsrfCookie(res);
 
       res.status(201).json({
         success: true,
-        data: {
-          accessToken: result.accessToken,
-          user: result.user,
-        },
+        data: { accessToken: result.accessToken, user: result.user },
       });
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes('already exists')) {
@@ -56,7 +84,6 @@ router.post(
   })
 );
 
-// POST /login
 router.post(
   '/login',
   authRateLimiter,
@@ -64,23 +91,14 @@ router.post(
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
       const body = req.body as { email: string; password: string };
-      const { email, password } = body;
-      const result = await loginUser(email, password);
+      const result = await loginUser(body.email, body.password);
 
-      res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, {
-        httpOnly: true,
-        secure: config.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
-        path: '/',
-      });
+      res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, authCookieOptions());
+      setCsrfCookie(res);
 
       res.status(200).json({
         success: true,
-        data: {
-          accessToken: result.accessToken,
-          user: result.user,
-        },
+        data: { accessToken: result.accessToken, user: result.user },
       });
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes('Invalid email or password')) {
@@ -95,11 +113,11 @@ router.post(
   })
 );
 
-// POST /refresh
 router.post(
   '/refresh',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
+      if (!requireCsrfForCookieAuth(req, res)) return;
       const refreshToken = req.cookies[REFRESH_COOKIE_NAME] as string | undefined;
 
       if (!refreshToken) {
@@ -110,14 +128,17 @@ router.post(
         return;
       }
 
-      const accessToken = await refreshAccessToken(refreshToken);
+      const result = await refreshAccessToken(refreshToken);
 
+      res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, authCookieOptions());
+      setCsrfCookie(res);
       res.status(200).json({
         success: true,
-        data: { accessToken },
+        data: { accessToken: result.accessToken },
       });
     } catch {
       res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+      res.clearCookie(CSRF_COOKIE_NAME, { path: '/' });
       res.status(401).json({
         success: false,
         error: { code: 'ERR_REFRESH_EXPIRED', message: 'Invalid or expired refresh token. Please login again.' },
@@ -126,10 +147,10 @@ router.post(
   })
 );
 
-// POST /logout
 router.post(
   '/logout',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    if (!requireCsrfForCookieAuth(req, res)) return;
     const refreshToken = req.cookies[REFRESH_COOKIE_NAME] as string | undefined;
 
     if (refreshToken) {
@@ -137,32 +158,24 @@ router.post(
     }
 
     const authHeader = req.headers.authorization;
-    if (authHeader) {
-      const token = authHeader.split(' ')[1];
-      if (token) {
-        const signature = token.split('.')[2];
-        if (signature) {
-          jwtBlocklist.add(signature);
-        }
-      }
+    const token = authHeader?.split(' ')[1];
+    const signature = token?.split('.')[2];
+    if (signature) {
+      jwtBlocklist.add(signature);
     }
 
     res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+    res.clearCookie(CSRF_COOKIE_NAME, { path: '/' });
 
-    res.status(200).json({
-      success: true,
-      data: null,
-    });
+    res.status(200).json({ success: true, data: null });
   })
 );
 
-// GET /profile (for AuthContext bootstrap)
 router.get(
   '/profile',
   authMiddleware,
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const userId = req.user?.id as string;
-    // Import getSettings inline to avoid circular dependency
     const { getSettings } = await import('../services/settings.service.js');
     const profile = await getSettings(userId);
 
@@ -173,7 +186,6 @@ router.get(
   })
 );
 
-
 router.delete(
   '/account',
   authMiddleware,
@@ -182,28 +194,20 @@ router.delete(
     try {
       const userId = req.user?.id as string;
       const body = req.body as { password: string };
-      const { password } = body;
-
-      // Blocklist the current access token immediately
       const authHeader = req.headers.authorization;
-      if (authHeader) {
-        const token = authHeader.split(' ')[1];
-        if (token) {
-          const signature = token.split('.')[2];
-          if (signature) {
-            jwtBlocklist.add(signature);
-          }
+      const token = authHeader?.split(' ')[1];
+      const signature = token?.split('.')[2];
+
+      await deleteAccountWithSessionInvalidation(
+        () => deleteUserAccount(userId, body.password),
+        () => {
+          if (signature) jwtBlocklist.add(signature);
         }
-      }
-      
-      await deleteUserAccount(userId, password);
+      );
 
       res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
-
-      res.status(200).json({
-        success: true,
-        data: null,
-      });
+      res.clearCookie(CSRF_COOKIE_NAME, { path: '/' });
+      res.status(200).json({ success: true, data: null });
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes('password')) {
         res.status(403).json({

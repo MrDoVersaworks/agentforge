@@ -4,17 +4,14 @@ import { authMiddleware } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import {
   geminiKeySchema,
-  resendKeySchema,
   updateSettingsSchema,
 } from '../types/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireUserId } from '../utils/requestIdentity.js';
 import {
   deleteGeminiKey,
-  deleteResendKey,
   getSettings,
   saveGeminiKey,
-  saveResendKey,
   updateSettings,
 } from '../services/settings.service.js';
 
@@ -65,20 +62,6 @@ router.post(
   })
 );
 
-router.post(
-  '/resend-key',
-  validate(resendKeySchema),
-  asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const body = req.body as { resend_key: string };
-    await saveResendKey(requireUserId(req), body.resend_key);
-
-    res.status(200).json({
-      success: true,
-      message: 'Resend API Key successfully updated.',
-    });
-  })
-);
-
 router.delete(
   '/api-key',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -86,17 +69,6 @@ router.delete(
     res.status(200).json({
       success: true,
       message: 'Gemini API Key purged successfully.',
-    });
-  })
-);
-
-router.delete(
-  '/resend-key',
-  asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    await deleteResendKey(requireUserId(req));
-    res.status(200).json({
-      success: true,
-      message: 'Resend API Key purged successfully.',
     });
   })
 );
