@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { PlatformReviews } from '@/components/PlatformReviews';
 import { UnifiedFooter } from '@/components/UnifiedFooter';
-import api, { setAccessToken } from '@/lib/api';
 
 // ================================================================
 // AgentForge — Landing Page
@@ -202,7 +201,7 @@ function useTypingEffect(words: string[], typingSpeed: number, deletingSpeed: nu
 
 export default function LandingPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading, login, register } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const typedWord = useTypingEffect(
