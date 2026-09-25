@@ -142,6 +142,7 @@ router.post(
       });
     } catch {
       res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+      res.clearCookie(CSRF_COOKIE_NAME, { path: '/' });
       res.status(401).json({
         success: false,
         error: { code: 'ERR_REFRESH_EXPIRED', message: 'Invalid or expired refresh token. Please login again.' },
@@ -209,6 +210,7 @@ router.delete(
       );
 
       res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+      res.clearCookie(CSRF_COOKIE_NAME, { path: '/' });
       res.status(200).json({ success: true, data: null });
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes('password')) {
