@@ -175,3 +175,14 @@ Still open for final evidence:
 - CSP validation against actual deployed assets and scripts;
 - A2A script inventory and targeted updates if the scripts are affected by the reconciled API contracts;
 - any remaining audit findings not independently proven.
+
+
+### Frontend response security headers
+
+Observed deployment state: the current production frontend response did not advertise a Content-Security-Policy header.
+
+Intended behavior: the deployed frontend should constrain script, frame, connection, and object sources while retaining the explicitly configured legal and analytics integrations.
+
+Implementation: Next.js now emits CSP, Referrer-Policy, X-Content-Type-Options, and Permissions-Policy headers. The CSP scopes API connections to NEXT_PUBLIC_API_URL when it is available and retains the required Termly and Google Analytics script/frame sources.
+
+Proof added: the configuration is covered by the production build path. Final closure still requires a deployed preview response-header check and browser verification to confirm that all legitimate scripts continue to load.
