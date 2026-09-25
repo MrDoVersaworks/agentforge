@@ -98,6 +98,6 @@ jobs:
       - name: Public E2E
         run: npx playwright test tests/e2e/public-experience.spec.ts --project=chromium
         env:
-          NEXT_PUBLIC_API_URL: http://127.0.0.1:5999
+          NEXT_PUBLIC_API_URL: http://localhost:3004
           PLAYWRIGHT_PUBLIC_ONLY: '1'
           PLAYWRIGHT_RETRIES: '0'
