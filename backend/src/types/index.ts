@@ -9,6 +9,7 @@ const DEFAULT_TEMPERATURE = 0.7;
 export interface UserPayload {
   id: string;
   email: string;
+  session_id: string;
 }
 
 declare module 'express-serve-static-core' {
