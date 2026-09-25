@@ -99,7 +99,7 @@ To run the automated E2E lifecycle test suite:
 # 1. Start the Backend Server (port 5003)
 cd backend
 npm install
-npm run db:push
+npm run db:migrate
 npm run dev
 
 # 2. Start the Frontend Server (port 3003)
@@ -129,7 +129,7 @@ npx playwright test tests/e2e/public-experience.spec.ts --project=chromium --hea
    cd agentforge/backend
    npm install
    # Copy .env.example to .env and configure DATABASE_URL + GEMINI_API_KEY
-   npm run db:push
+   npm run db:migrate
    npm run dev
    ```
 
