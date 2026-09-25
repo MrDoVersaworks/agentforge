@@ -212,3 +212,104 @@ Preserved behavior: migrations remain versioned and idempotent through Drizzle's
 Positive proof: CI must continue to pass the backend build and fresh PostgreSQL + pgvector migration smoke test. The production start path is now deterministic and secret-free from source control.
 
 Regression proof required for final closure: deploy the backend through its actual production host with its configured DATABASE_URL, verify startup applies the pending migration(s), then verify API health and application flows. This remediation does not claim that the live production database has already been migrated; it establishes the automated path that will perform the migration when the backend deployment/start occurs.
+
+## Final post-production verification gate
+
+This is a required final evidence step and is intentionally separate from CI, local verification, preview verification, and fresh-database pre-production testing. The remediation must not be marked fully closed merely because the application builds, tests pass, migrations succeed on a fresh database, or a preview behaves correctly.
+
+### When to perform
+
+After the remediation is deployed to the actual production environment, perform this verification against the real production deployment, production database, configured infrastructure, and production integrations. Record the deployment commit/version, environment, timestamp, operator, and exact test scope before recording results.
+
+### Verification matrix
+
+For each area below, record what was actually tested, result (PASS, FAIL, or UNVERIFIED), evidence/reference, and limitations or unverified items. Do not infer a production result from CI or pre-production evidence.
+
+1. **Production deployment and infrastructure**
+   - Verify the intended production artifact/version is deployed and the expected frontend and backend services are running.
+   - Verify required production environment variables/secrets are present through the deployment platform rather than source control.
+   - Verify health/readiness behavior, routing, TLS/origin configuration, service-to-service connectivity, and deployment/startup logs.
+   - Confirm the backend actually executes the tracked migration runner before serving traffic where that is the configured deployment path.
+
+2. **Production database, schema, and migrations**
+   - Verify the production DATABASE_URL is the intended database and that the tracked Drizzle migration history is applied successfully.
+   - Verify migration 0003_schema_auth_review_reconciliation.sql and all prior required migrations are present in the production migration journal.
+   - Verify the expected production schema, indexes/constraints, pgvector extension, session/revocation fields, and review moderation state.
+   - Confirm no schema drift or failed/partially applied migration remains.
+
+3. **Persistence and data integrity**
+   - Exercise representative create/read/update/delete flows that were touched by remediation.
+   - Verify persisted values retain their intended types, relationships, ownership, timestamps, and semantic data without silent truncation/padding.
+   - Verify the 768-dimension embedding contract against the production provider/integration path where applicable.
+   - Confirm existing production data remains readable and functionally intact.
+
+4. **Authentication and session behavior**
+   - Verify login, registration, refresh, rotation, logout, account deletion, refresh-token replay handling, and session invalidation in production.
+   - Verify failed account deletion does not invalidate the active session and successful deletion does.
+   - Verify revoked durable sessions remain rejected across separate backend instances/processes where the production topology permits this test.
+   - Verify production refresh-cookie and CSRF behavior across the real frontend/backend origins.
+
+5. **Authorization and access control**
+   - Test an authorized user, an authenticated non-owner, an unauthenticated request, and the configured administrator against representative protected resources.
+   - Verify object-level ownership checks remain enforced server-side for agents, knowledge, chat/conversations, and other affected resources.
+   - Verify the configured ADMIN_USER_ID path grants intended administrative operations and that non-admin users remain denied.
+
+6. **Security boundaries and adversarial cases**
+   - Exercise malformed/invalid UUID resource identifiers, missing/invalid authentication, expired/revoked credentials, CSRF failures, cross-origin cookie cases, and representative unauthorized object access.
+   - Verify the public sandbox path does not expose a reusable fixed credential pair and still enforces the intended policy acknowledgement flow.
+   - Verify production security headers/CSP are actually present and compatible with all legitimate scripts, frames, connections, and legal/analytics integrations.
+   - Record any security control that could not be exercised safely in production as UNVERIFIED rather than assuming the pre-production result transfers to production.
+
+7. **API contracts and client/server integration**
+   - Exercise the production frontend against the production backend for the reconciled agent, knowledge, chat, conversation/message, auth, sandbox, and review paths that are in scope.
+   - Verify snake_case server DTOs and camelCase frontend mappings, request payloads, UUID boundaries, and chat SSE envelopes (chunk events plus [DONE]).
+   - Verify streaming handles partial SSE lines and surfaces stream failures without corrupting the conversation state.
+
+8. **Background jobs, notifications, and scheduled processes**
+   - Where production uses workers, queues, schedulers, cron jobs, notification delivery, or asynchronous processing, verify the affected workflows execute once as intended, persist their results, and do not regress under retry/restart conditions.
+   - If a capability is not present in AgentForge production, record it as NOT APPLICABLE rather than inventing a test. If the production mechanism exists but cannot be safely exercised, record UNVERIFIED with the reason.
+
+9. **File/object storage and external integrations**
+   - Where applicable, verify upload, persistence, retrieval, deletion, authorization, and failure handling against the real production storage provider.
+   - Verify external integrations used by affected flows, including provider credentials, API contracts, rate limits, and error handling, without exposing secrets in evidence.
+   - If no production file/object-storage surface exists, record NOT APPLICABLE.
+
+10. **Frontend/browser behavior and integration**
+    - Run the public landing, policy acknowledgement, sandbox launch, authentication, dashboard, review, and affected application flows in supported desktop and mobile browser contexts.
+    - Verify responsive behavior, theme switching, Terms of Service, Privacy Policy, navigation, loading/error states, and the production CSP/security headers.
+    - Confirm the visual polish did not remove or alter intended product workflows.
+
+11. **End-to-end and regression behavior**
+    - Run the applicable production-safe E2E/regression suite against the deployed system.
+    - Re-run the specific flows that correspond to every material remediation finding, not merely generic smoke tests.
+    - Where A2A scripts or endpoints do not exist in this repository, record that as NOT APPLICABLE or outside the evidence boundary rather than fabricating a test. If production exposes an external A2A surface, identify it explicitly before testing.
+
+12. **Original functionality preservation**
+    - For every material remediation, explicitly demonstrate the pre-existing intended behavior that had to remain intact.
+    - Record the original behavior, the remediation behavior, the preserved behavior, the production test used to prove preservation, and the result.
+    - A remediation finding is not fully closed when the security/control change works but the required original functionality has not been demonstrated in production.
+
+### Production verification result record
+
+Use the following structure when the production verification is actually performed:
+
+| Area | What was actually tested | Result | Evidence/reference | Limitations / unverified items |
+| --- | --- | --- | --- | --- |
+| Production deployment and infrastructure | TBD | UNVERIFIED | TBD | Awaiting production deployment |
+| Production database/schema/migrations | TBD | UNVERIFIED | TBD | Awaiting production deployment and migration verification |
+| Persistence/data integrity | TBD | UNVERIFIED | TBD | Awaiting production data-path testing |
+| Authentication/session behavior | TBD | UNVERIFIED | TBD | Awaiting production auth/session testing |
+| Authorization/access control | TBD | UNVERIFIED | TBD | Awaiting production authorization testing |
+| Security boundaries/adversarial cases | TBD | UNVERIFIED | TBD | Awaiting production security verification |
+| API contracts/client-server integration | TBD | UNVERIFIED | TBD | Awaiting production integration testing |
+| Background jobs/notifications/scheduled processes | TBD | UNVERIFIED | TBD | Determine applicability from production infrastructure |
+| File/object storage/external integrations | TBD | UNVERIFIED | TBD | Determine applicability from production infrastructure |
+| Frontend/browser behavior/integration | TBD | UNVERIFIED | TBD | Awaiting production browser verification |
+| End-to-end/regression behavior | TBD | UNVERIFIED | TBD | Awaiting production E2E/regression execution |
+| Original functionality preservation | TBD | UNVERIFIED | TBD | Awaiting production proof for preserved behavior |
+
+### Closure rule
+
+**Production verification is currently an outstanding evidence gate.** The remediation must remain documented as implemented and pre-production-tested, but not fully closed, until the matrix above has been completed against the real production environment. Once production testing is performed, replace each TBD/UNVERIFIED entry with the actual test, result, evidence, and limitation. Any failure or material unverified item must remain open and be investigated rather than being converted into a pass by inference.
+
+No application behavior is changed by this section. This is documentation and evidence-tracking only.
