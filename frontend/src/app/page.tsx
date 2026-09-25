@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { PlatformReviews } from '@/components/PlatformReviews';
@@ -8,7 +8,7 @@ import { UnifiedFooter } from '@/components/UnifiedFooter';
 
 // ================================================================
 // AgentForge — Landing Page
-// Interactive particle constellation + sandbox demo + split hero
+// Interactive particle constellation + split hero
 // ================================================================
 
 // ── Particle System (Canvas-based neural constellation) ──
