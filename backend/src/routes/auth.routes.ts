@@ -93,13 +93,8 @@ router.post(
       const body = req.body as { email: string; password: string };
       const result = await loginUser(body.email, body.password);
 
-      res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, {
-        httpOnly: true,
-        secure: config.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
-        path: '/',
-      });
+      res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, authCookieOptions());
+      setCsrfCookie(res);
 
       res.status(200).json({
         success: true,
