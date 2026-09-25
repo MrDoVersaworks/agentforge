@@ -186,3 +186,14 @@ Intended behavior: the deployed frontend should constrain script, frame, connect
 Implementation: Next.js now emits CSP, Referrer-Policy, X-Content-Type-Options, and Permissions-Policy headers. The CSP scopes API connections to NEXT_PUBLIC_API_URL when it is available and retains the required Termly and Google Analytics script/frame sources.
 
 Proof added: the configuration is covered by the production build path. Final closure still requires a deployed preview response-header check and browser verification to confirm that all legitimate scripts continue to load.
+
+
+### A2A contract inventory
+
+A repository-wide code search on the remediation head found no A2A scripts, agent-card files, A2A protocol endpoints, or /.well-known A2A artifacts in AgentForge. No A2A implementation was therefore changed or fabricated. If an external A2A package or deployment-side script exists outside this repository, it remains outside the evidence boundary of this remediation.
+
+### Final verification update
+
+CI run 64 reached the backend type check, fresh pgvector migration smoke test, backend contract tests, frontend type check, and frontend production build successfully. The public Playwright job remained in progress during this audit pass, so it is not treated as a passed browser regression.
+
+Main remains untouched. No remediation finding is being called fully closed solely from static inspection or successful compilation.
