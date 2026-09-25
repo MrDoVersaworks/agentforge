@@ -280,7 +280,6 @@ export default function LandingPage() {
               Start Building
             </button>
           </div>
-          </div>
         </div>
       </nav>
 
