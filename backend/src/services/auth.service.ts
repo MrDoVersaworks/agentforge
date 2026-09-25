@@ -122,7 +122,8 @@ async function assertEmailAvailable(email: string): Promise<void> {
 async function persistRegistration(
   input: RegisterInput,
   passwordHash: string,
-  tokenMaterial: RefreshTokenMaterial
+  tokenMaterial: RefreshTokenMaterial,
+  sessionId: string
 ): Promise<{ user: AuthUserRecord; refreshToken: string }> {
   return db.transaction(async (transaction) => {
     const insertedUsers = await transaction
@@ -173,7 +174,7 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
     createRefreshTokenMaterial(),
   ]);
   const sessionId = crypto.randomUUID();
-  const registration = await persistRegistration(input, passwordHash, tokenMaterial);
+  const registration = await persistRegistration(input, passwordHash, tokenMaterial, sessionId);
 
   return buildAuthResult(registration.user, registration.refreshToken, sessionId, false);
 }
