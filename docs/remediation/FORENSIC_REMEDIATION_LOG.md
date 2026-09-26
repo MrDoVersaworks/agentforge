@@ -550,3 +550,35 @@ The assistant cannot perform a real browser login with the user's credentials fr
 
 ### Migration proof status
 Production migration execution remains UNVERIFIED at the build-log level because the available Vercel build-log connector is unavailable. CI migration smoke testing and READY deployments prove build/test health, not that production migration SQL was executed. Do not mark this subfinding closed until production build-log evidence or equivalent direct production schema evidence is obtained.
+
+## 2026-09-26 — authentication context split and stale bootstrap remediation
+
+### Original behavior
+Production login returned HTTP 200, but the dashboard could immediately disappear and redirect back to /login. Vercel runtime logs showed successful login/profile/refresh requests interspersed with refresh 401 responses.
+
+Source inspection established a concrete frontend state defect:
+- The root frontend/src/app/layout.tsx already mounted AuthProvider.
+- frontend/src/app/(auth)/layout.tsx mounted a second, independent AuthProvider.
+- Therefore the login page consumed the nested provider and stored the successful login only in that provider.
+- The dashboard route consumed the root provider. On navigation, the nested provider was unmounted, so the dashboard saw the root provider's unauthenticated state and redirected to /login.
+- The root provider also started a bootstrap /auth/refresh when the application mounted. Its result could complete after a newer login/register operation and previously could clear authentication state established by that newer operation.
+
+This explains the observed production symptom without requiring credentials or a backend authentication failure: /auth/login can succeed while the dashboard still receives a different, unauthenticated React auth context.
+
+### Intended remediation behavior
+- Exactly one AuthProvider owns authentication state for the entire application.
+- Login and registration must update the same context consumed by protected routes.
+- A stale bootstrap refresh must never clear or overwrite state created by a newer login, registration, or logout.
+- Refresh-token rotation, CSRF validation, access-token validation, durable sessions, and backend authentication semantics must remain unchanged.
+
+### Changes
+- Removed the duplicate AuthProvider from frontend/src/app/(auth)/layout.tsx; the root provider is now the single provider across auth and dashboard route groups.
+- Added a monotonic auth-operation ID in frontend/src/contexts/AuthContext.tsx.
+- Login, registration, and logout advance that operation ID.
+- Bootstrap refresh and its subsequent profile request capture their operation ID and discard stale results if a newer auth operation has started.
+- This is a frontend state-coordination fix; it does not weaken authentication checks or change token/session security semantics.
+
+### Proof requirements
+Positive proof requires frontend type checking/building and the existing public E2E suite to pass. The critical regression scenario is: a login started while bootstrap refresh is pending must leave the authenticated user and access token intact after the stale bootstrap request completes, and /dashboard must remain accessible.
+
+Backend auth behavior and refresh-token rotation must remain covered by the existing backend contract tests.
