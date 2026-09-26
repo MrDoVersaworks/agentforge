@@ -99,7 +99,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="settings-content-layout">
-        {/* ── Left Column: Credentials & Profile ── */}
+        {/* ── LLM Configuration ── */}
         <div className="settings-form-column">
           {/* Card 1: LLM Setup */}
           <div className="glass settings-card">
