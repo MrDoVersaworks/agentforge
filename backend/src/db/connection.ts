@@ -5,12 +5,18 @@ import * as schema from './schema.js';
 
 const { Pool } = pg;
 
-const sslOption = config.DATABASE_URL.includes('sslmode=require') 
+const databaseUrl = new URL(config.DATABASE_URL);
+const legacySslMode = databaseUrl.searchParams.get('sslmode');
+const legacySsl = databaseUrl.searchParams.get('ssl');
+databaseUrl.searchParams.delete('sslmode');
+databaseUrl.searchParams.delete('ssl');
+
+const sslOption = legacySslMode === 'require' || legacySsl === 'true'
   ? { rejectUnauthorized: false }
-  : config.DATABASE_URL.includes('ssl=true') ? { rejectUnauthorized: false } : undefined;
+  : undefined;
 
 const pool = new Pool({
-  connectionString: config.DATABASE_URL,
+  connectionString: databaseUrl.toString(),
   ssl: sslOption,
 });
 
