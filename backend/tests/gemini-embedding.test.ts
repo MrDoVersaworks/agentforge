@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { generateEmbedding } from '../src/services/gemini.service.js';
+process.env.DATABASE_URL ??= 'postgresql://postgres:postgres@localhost:5432/ci_db';
+process.env.JWT_ACCESS_SECRET ??= 'ci_access_secret_for_testing_32bytes';
+process.env.JWT_REFRESH_SECRET ??= 'ci_refresh_secret_for_testing_32bytes';
+process.env.AES_ENCRYPTION_KEY ??= '0000000000000000000000000000000000000000000000000000000000000000';
+process.env.CORS_ORIGIN ??= 'http://localhost:3003';
+
+const { generateEmbedding } = await import('../src/services/gemini.service.js');
 
 test('generateEmbedding requests the supported Gemini embedding model at the database dimension', async () => {
   const originalFetch = globalThis.fetch;
