@@ -468,3 +468,46 @@ Verification requirement: the next backend production build must show the migrat
 
 ### Deployment-trigger probe
 A minimal documentation-only change was made on `main` solely to generate a fresh Git push event for the Vercel Git integration. No application behavior or remediation logic was changed. The resulting push is being used only to determine whether Vercel automatically creates a deployment for a new `main` commit.
+
+
+## 2026-09-26 authentication, legal, and deployment correction
+
+### Production evidence that triggered the remediation
+The current Vercel backend deployment dpl_AuPfVozY5Sok3vRoX78SV4Zj2Jdo recorded successful POST /api/auth/login and GET /api/auth/profile requests, but it also recorded repeated POST /api/auth/refresh 401/403 responses. The 403 responses were produced by the cookie-authenticated CSRF check; the 401 responses followed failed refresh attempts. This established that the browser could reach the backend and that the persistent-session path, not basic connectivity, was the material failure observed in the deployment.
+
+The same deployment recorded POST /api/auth/register 400 responses. Source inspection established a second defect: backend validation can return message as a string or error as a structured object, while the registration page previously attempted to render response.data.error directly. A structured error object can therefore produce React minified error #31 in the browser after the 400 response.
+
+The backend also emitted ERR_ERL_UNEXPECTED_X_FORWARDED_FOR because Vercel supplies X-Forwarded-For while Express had the default proxy trust setting. This was corrected with an explicit one-hop trust setting appropriate to the Vercel proxy boundary.
+
+### Root cause and remediation
+The production frontend and backend are separate origins. The backend's non-httpOnly CSRF cookie is therefore not readable through document.cookie from the frontend origin, even though the browser can send the backend cookie with credentialed requests. The previous frontend implementation consequently could not reliably reproduce the CSRF header required by /auth/refresh and /auth/logout after deployment/reload.
+
+Remediation now returns the CSRF token in login, registration, and refresh responses, persists that token in browser storage, sends it on cookie-authenticated refresh/logout requests, and rotates the stored value after refresh. The backend CORS allow-list explicitly includes X-CSRF-Token. Login and registration now also establish the authenticated user from the successful auth response instead of immediately requiring a second profile request.
+
+The password error display was normalized so string messages, structured { message } errors, and validation message responses all render as text. Browser password reveal affordances supported by the browser are suppressed where possible; the deliberate AgentForge Show/Hide controls remain the only application-provided visibility controls.
+
+### Legal pages
+The Terms and Privacy pages were replaced with coherent, static, product-grounded documents rather than a failed /api/v1/public/legal/... fetch plus sparse fallback. The pages now have consistent navigation, effective/version metadata, readable sections, desktop on-page navigation, and responsive mobile behavior. The wording is limited to behaviors evidenced by the current application and is explicitly not represented as jurisdiction-specific legal advice.
+
+### Verification
+PR #4 (fix: restore production authentication and refine legal pages) was merged as ca9bf5af5327a0331bbdcd16ac8c56ec15781ebf after the final GitHub CI run passed:
+- Backend type check: PASS
+- Backend production build: PASS
+- Fresh PostgreSQL + pgvector migration smoke test: PASS
+- Backend contract tests: PASS
+- Frontend type check: PASS
+- Frontend production build: PASS
+- Public Playwright E2E: PASS (5/5)
+
+The E2E failure found during the first CI attempt was a test selector ambiguity, not an application failure; the selector was corrected to target the exact AgentForge brand link and the final E2E run passed.
+
+### Production database migration status
+The authoritative production migration gate remains in backend/scripts/vercel-build.mjs: production requires DATABASE_URL and runs npm run db:migrate before TypeScript compilation; non-production deployments skip production migrations. The fresh-database CI migration smoke test passed on the final PR head.
+
+A successful production deployment alone is not proof that a particular migration executed. The available Vercel build-log connector did not provide the backend build log needed to directly observe the migration command in the production deployment. Therefore production migration execution is recorded as UNVERIFIED, not falsely marked complete. The required proof is the backend production build log showing the migration gate executing successfully against the configured production DATABASE_URL, followed by production schema/runtime verification.
+
+### Deployment trigger evidence
+The earlier main push probe did successfully trigger a Vercel backend production deployment. The current remediation merge is now the authoritative application state. The next required step is to verify the resulting frontend and backend production deployments against the merged commit and then execute production authentication, registration, session, and legal-page smoke tests.
+
+### Superseding stale log entries
+Earlier entries in this document described the remediation as branch-only and described a frontend-owned production migration gate. Those statements reflect earlier intermediate states and are superseded by this section: PR #4 is merged into main, the frontend no longer owns production database migrations, and the backend deployment is the authoritative production migration path.
