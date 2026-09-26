@@ -2,7 +2,7 @@ import { pgTable, uuid, varchar, text, timestamp, real, index, boolean, customTy
 import { relations } from 'drizzle-orm';
 
 // ============================================================
-// pgvector Custom Type (768 Dimensions for text-embedding-004)
+// pgvector Custom Type (768 Dimensions for gemini-embedding-001)
 // ============================================================
 export const pgVector768 = customType<{ data: number[]; driverData: string }>({
   dataType() {
