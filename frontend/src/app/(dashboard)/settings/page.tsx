@@ -26,10 +26,6 @@ export default function SettingsPage() {
   const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash');
   const [savingKey, setSavingKey] = useState(false);
 
-  // ── Profile States ──
-  const [name, setName] = useState('');
-  const [savingProfile, setSavingProfile] = useState(false);
-
   // ── Account Deletion States ──
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
@@ -38,7 +34,6 @@ export default function SettingsPage() {
   // ── Hydrate forms with user info ──
   useEffect(() => {
     if (user) {
-      setName(user.name ? user.name : '');
       setGeminiModel(user.geminiModel ? user.geminiModel : 'gemini-2.5-flash');
     }
   }, [user]);
@@ -66,28 +61,6 @@ export default function SettingsPage() {
       addToast('error', extractErrorMessage(err, 'Failed to update Gemini settings.'));
     } finally {
       setSavingKey(false);
-    }
-  };
-
-  // ── Save Profile Name ──
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) {
-      addToast('error', 'Name cannot be empty.');
-      return;
-    }
-    setSavingProfile(true);
-
-    try {
-      await api.patch('/settings', {
-        name: name.trim(),
-      });
-      await refreshUser();
-      addToast('success', 'Profile updated successfully.');
-    } catch (err: unknown) {
-      addToast('error', extractErrorMessage(err, 'Failed to update profile.'));
-    } finally {
-      setSavingProfile(false);
     }
   };
 
@@ -121,7 +94,7 @@ export default function SettingsPage() {
       <div className="page-header">
         <div className="page-header-text">
           <h1>Global Settings</h1>
-          <p>Configure your model credentials, profile, and account</p>
+          <p>Configure your model access and account security</p>
         </div>
       </div>
 
@@ -178,46 +151,6 @@ export default function SettingsPage() {
             </form>
           </div>
 
-          {/* Card 2: Profile Setup */}
-          <div className="glass settings-card">
-            <div className="card-header-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="cyan-icon">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-              <h3>Profile Settings</h3>
-            </div>
-            <p className="card-desc">Update your personal account display information.</p>
-
-            <form onSubmit={handleSaveProfile}>
-              <div className="form-group">
-                <label className="input-label">Full Name</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  maxLength={50}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="input-label">Email Address</label>
-                <input
-                  type="email"
-                  className="input-field disabled-field"
-                  value={user?.email ? user?.email : ''}
-                  disabled
-                />
-                <span className="field-hint">Email address cannot be changed.</span>
-              </div>
-
-              <button type="submit" className="btn btn-primary" disabled={savingProfile}>
-                {savingProfile ? 'Updating Profile...' : 'Save Profile'}
-              </button>
-            </form>
-          </div>
         </div>
 
         {/* ── Right Column: Danger Zone ── */}
@@ -342,9 +275,9 @@ export default function SettingsPage() {
         /* ── Layout ── */
         .settings-content-layout {
           display: grid;
-          grid-template-columns: 1.2fr 1fr;
-          gap: var(--space-xl);
-          margin-top: var(--space-xl);
+          grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr);
+          gap: 24px;
+          margin-top: 24px;
         }
 
         @media (max-width: 1024px) {
@@ -355,8 +288,8 @@ export default function SettingsPage() {
 
         /* ── Settings Card ── */
         .settings-card {
-          padding: 28px;
-          margin-bottom: var(--space-xl);
+          padding: 24px;
+          margin-bottom: 0;
         }
         .card-header-icon {
           display: flex;
@@ -434,7 +367,7 @@ export default function SettingsPage() {
         .danger-card {
           border-color: rgba(251, 113, 133, 0.25);
           background: rgba(251, 113, 133, 0.02);
-          padding: 28px;
+          padding: 24px;
         }
         .danger-card:hover {
           border-color: rgba(251, 113, 133, 0.4);
