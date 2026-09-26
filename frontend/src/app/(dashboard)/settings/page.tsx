@@ -178,22 +178,24 @@ export default function SettingsPage() {
                 <span className="danger-consequence-dot" aria-hidden="true" />
                 <span>Agents, documents, API credentials, and chat history will be erased.</span>
               </div>
-              <button
-                type="button"
-                className="btn btn-danger danger-trigger"
-                disabled={deletingAccount}
-                onClick={() => setShowDeleteAccount(true)}
-                aria-haspopup="dialog"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M4 7h16" />
-                  <path d="M10 11v6" />
-                  <path d="M14 11v6" />
-                  <path d="M6 7l1 13h10l1-13" />
-                  <path d="M9 7V4h6v3" />
-                </svg>
-                <span>Delete Account</span>
-              </button>
+              <div className="danger-action">
+                <button
+                  type="button"
+                  className="btn btn-danger danger-trigger"
+                  disabled={deletingAccount}
+                  onClick={() => setShowDeleteAccount(true)}
+                  aria-haspopup="dialog"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M4 7h16" />
+                    <path d="M10 11v6" />
+                    <path d="M14 11v6" />
+                    <path d="M6 7l1 13h10l1-13" />
+                    <path d="M9 7V4h6v3" />
+                  </svg>
+                  <span>Delete Account</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -502,10 +504,13 @@ export default function SettingsPage() {
         }
         .danger-action-row {
           display: flex;
-          flex-direction: column;
-          align-items: stretch;
-          gap: 14px;
-          padding-top: 18px;
+          align-items: center;
+          justify-content: space-between;
+          gap: 18px;
+          padding-top: 16px;
+        }
+        .danger-action {
+          flex: 0 0 auto;
         }
         .danger-consequence {
           display: flex;
@@ -516,27 +521,29 @@ export default function SettingsPage() {
           line-height: 1.5;
         }
         .danger-trigger {
-          width: 100%;
-          min-height: 44px;
+          min-width: 148px;
+          min-height: 40px;
           justify-content: center;
-          gap: 9px;
-          border-radius: 10px;
-          background: rgba(255, 69, 58, 0.055);
-          border-color: rgba(255, 69, 58, 0.28);
+          gap: 8px;
+          padding: 0 14px;
+          border-radius: 9px;
+          background: rgba(251, 113, 133, 0.045);
+          border-color: rgba(251, 113, 133, 0.24);
           color: var(--accent-rose);
-          font-size: 0.8rem;
+          font-size: 0.76rem;
           font-weight: 700;
           letter-spacing: 0.005em;
+          white-space: nowrap;
         }
         .danger-trigger svg {
           flex: 0 0 auto;
           opacity: 0.9;
         }
         .danger-trigger:hover {
-          background: rgba(255, 69, 58, 0.11);
-          border-color: rgba(255, 69, 58, 0.48);
+          background: rgba(251, 113, 133, 0.09);
+          border-color: rgba(251, 113, 133, 0.4);
           color: var(--accent-rose);
-          box-shadow: 0 4px 16px rgba(255, 69, 58, 0.12);
+          box-shadow: 0 5px 16px rgba(251, 113, 133, 0.1);
         }
         .danger-consequence-dot {
           width: 5px;
@@ -549,7 +556,15 @@ export default function SettingsPage() {
 
         @media (max-width: 768px) {
           .danger-action-row {
-            gap: 12px;
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 13px;
+          }
+          .danger-action {
+            width: 100%;
+          }
+          .danger-trigger {
+            width: 100%;
           }
         }
         @media (max-width: 560px) {
