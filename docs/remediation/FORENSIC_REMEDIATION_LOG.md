@@ -607,3 +607,72 @@ Settings should stay focused on product configuration and account security. Redu
 ### Proof requirement
 GitHub CI must pass frontend typecheck/build and public E2E after these changes. The settings page must render only the remaining configuration and account-security sections; the public footer must retain Contact (when configured), Terms, and Privacy navigation.
 
+
+
+## 2026-09-26 — production login redirect root-cause confirmation
+
+### Observed behavior
+The reported production symptom was: credentials are accepted, but the application does not reliably enter the dashboard; after opening the Vercel deployment and clicking Visit, a fresh application load can reach the dashboard.
+
+### Evidence
+Production backend runtime logs for deployment `dpl_A12rUM7541fcSVjTBXZF2LQ1a4wN` on `main` show successful authentication and profile requests:
+- POST `/api/auth/login` returned 200 repeatedly.
+- GET `/api/auth/profile` returned 200.
+- POST `/api/auth/refresh` returned both 200 and repeated 401 responses, including bursts of multiple 401 responses at the same second.
+
+Source inspection of the production `main` commit established the client-side cause:
+- `frontend/src/app/layout.tsx` mounts an application-wide `AuthProvider`.
+- `frontend/src/app/(auth)/layout.tsx` mounts a second independent `AuthProvider`.
+- The login page therefore updates the auth provider owned by the auth route group, while the dashboard consumes the root provider.
+- Both providers also execute their bootstrap `POST /auth/refresh` on mount.
+- The backend intentionally performs one-time refresh-token rotation: a successful refresh revokes the presented refresh token and creates a replacement. A concurrent second refresh using the same cookie therefore receives the replay/invalid-token path and HTTP 401.
+- The root provider's bootstrap failure can clear its access token/user state. When navigation moves from the auth route group to the dashboard, the nested provider is unmounted and the dashboard is left with the root provider's state. This directly explains why a successful login can still be followed by a redirect to `/login`.
+- A fresh Vercel Visit starts a new application lifecycle with one root provider, so a fresh refresh can establish the session and make the dashboard accessible. This matches the reported recovery behavior.
+
+### Root cause
+The production issue was not a basic login or backend connectivity failure. It was the interaction of **duplicate frontend authentication contexts** with **one-time refresh-token rotation**. The duplicate providers caused concurrent bootstrap refreshes and split authentication state across route groups.
+
+### Intended remediation
+- Exactly one `AuthProvider` must own authentication state.
+- Login/register state must be the same state consumed by protected dashboard routes.
+- Bootstrap refresh/profile results that belong to an older auth operation must not overwrite a newer login/register/logout state.
+- Backend refresh-token rotation and security semantics must remain unchanged.
+
+### Remediation applied
+The existing PR #7 branch removes the duplicate auth provider from the auth route group and adds a monotonic auth-operation guard in `AuthContext.tsx`. This is the direct remediation for the confirmed root cause.
+
+### Production-state clarification
+At the time of this confirmation, production `main` still points to commit `10ee7dbac56bec7dc49be0fa10e2993acb2f68cc`, whose source still contains the duplicate provider. Therefore the root-cause remediation is **not yet production-live**. The corresponding frontend preview deployment for the remediation branch is READY, but it is not a production deployment.
+
+### Proof requirements
+Closure requires:
+1. CI passes on the final remediation head.
+2. The frontend production deployment is built from the remediation commit.
+3. A production login test shows login success followed by dashboard access without returning to `/login`.
+4. Runtime logs no longer show the duplicate-bootstrap refresh pattern associated with the two-provider lifecycle.
+5. The existing backend refresh-token rotation tests continue to pass.
+
+## 2026-09-26 — Danger Zone/account-deletion UI refinement
+
+### Original behavior
+The Danger Zone already opened a password-confirmation dialog and called the existing `DELETE /api/auth/account` flow. The functionality was correct, but the presentation was visually heavy and lacked clear hierarchy between the security warning, destructive consequence, password confirmation, and final action.
+
+### Intended remediation behavior
+The Danger Zone should look like a deliberate account-security section rather than a generic red card. The confirmation dialog should make the permanence and affected data clear before asking for the password, with balanced action hierarchy and responsive behavior.
+
+### Behavior that must remain
+- Account deletion remains explicitly initiated by the user.
+- Password confirmation remains required.
+- The existing `DELETE /api/auth/account` endpoint and request payload remain unchanged.
+- Successful deletion still clears the local auth state and returns the user to login.
+- Failed deletion still leaves the account/session intact and surfaces the existing error.
+- No backend deletion semantics or authorization behavior changes.
+
+### Changes
+- Refined the Danger Zone card with a compact security kicker, structured heading, restrained destructive treatment, explicit consequence text, and cleaner action alignment.
+- Redesigned the confirmation modal with a clearer permanent-action label, concise consequence list, improved spacing, stronger hierarchy, and responsive button stacking.
+- Added an accessible description relationship to the confirmation dialog.
+- No deletion logic was changed.
+
+### Proof requirements
+Frontend typecheck/build and the relevant E2E suite must pass. Manual authenticated verification should confirm the modal opens, dismissal clears the password, empty confirmation cannot submit, successful deletion follows the existing logout/redirect path, and an invalid password does not delete the account.
