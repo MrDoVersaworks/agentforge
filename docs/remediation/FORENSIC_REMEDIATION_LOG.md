@@ -582,3 +582,27 @@ This explains the observed production symptom without requiring credentials or a
 Positive proof requires frontend type checking/building and the existing public E2E suite to pass. The critical regression scenario is: a login started while bootstrap refresh is pending must leave the authenticated user and access token intact after the stale bootstrap request completes, and /dashboard must remain accessible.
 
 Backend auth behavior and refresh-token rotation must remain covered by the existing backend contract tests.
+
+
+## 2026-09-26 — settings/profile simplification and public about presentation
+
+### Original behavior
+The authenticated Settings screen combined Gemini credentials/model configuration, editable profile information (name and read-only email), and account deletion. The public footer contained only a minimal product/technology line and legal links, leaving the public product-introduction area visually underdeveloped.
+
+### Intended remediation behavior
+Settings should stay focused on product configuration and account security. Redundant profile-management UI should not occupy a full settings card when the application does not otherwise present profile management as a distinct product concern. The public footer/about area should have deliberate hierarchy, readable spacing, and a concise product description without changing navigation or legal links.
+
+### Behavior that must remain
+- Gemini API key/model configuration remains functional.
+- Account deletion remains password-protected and destructive behavior is unchanged.
+- Authentication, authorization, session, CSRF, and API behavior are untouched by this UI cleanup.
+- Terms of Service and Privacy Policy links remain available.
+- No backend profile endpoint or stored user data is removed merely because the redundant UI is removed.
+
+### Changes
+- Removed the Profile Settings card, profile-name form state, and profile-save handler from the Settings page.
+- Tightened Settings layout spacing and made the remaining configuration/danger-zone hierarchy more intentional.
+- Refined the public footer/about presentation with an explicit ABOUT kicker, concise product description, stronger product-name hierarchy, improved spacing, and a cleaner responsive layout.
+
+### Proof requirement
+GitHub CI must pass frontend typecheck/build and public E2E after these changes. The settings page must render only the remaining configuration and account-security sections; the public footer must retain Contact (when configured), Terms, and Privacy navigation.
