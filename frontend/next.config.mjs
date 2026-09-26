@@ -28,6 +28,10 @@ const contentSecurityPolicy = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  async rewrites() {
+    if (!configuredApiOrigin) return [];
+    return [{ source: '/api/:path*', destination: `${configuredApiOrigin}/api/:path*` }];
+  },
   async headers() {
     return [
       {

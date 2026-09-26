@@ -9,14 +9,20 @@ const MIGRATION_LOCK_KEY = 72674101;
 
 async function runMigrations() {
   logger.info('DATABASE', 'Starting database migrations...');
-  const sslOption = config.DATABASE_URL.includes('sslmode=require')
+  // pg emits a warning when legacy SSL query parameters remain in the
+  // connection string. Normalize them into the explicit pg client option so
+  // production TLS behavior is deliberate and the warning is removed.
+  const databaseUrl = new URL(config.DATABASE_URL);
+  const legacySslMode = databaseUrl.searchParams.get('sslmode');
+  const legacySsl = databaseUrl.searchParams.get('ssl');
+  databaseUrl.searchParams.delete('sslmode');
+  databaseUrl.searchParams.delete('ssl');
+  const sslOption = legacySslMode === 'require' || legacySsl === 'true'
     ? { rejectUnauthorized: false }
-    : config.DATABASE_URL.includes('ssl=true')
-      ? { rejectUnauthorized: false }
-      : undefined;
+    : undefined;
 
   const client = new pg.Client({
-    connectionString: config.DATABASE_URL,
+    connectionString: databaseUrl.toString(),
     ssl: sslOption,
   });
 
