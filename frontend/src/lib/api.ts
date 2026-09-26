@@ -7,8 +7,10 @@ const configuredUrl = process.env.NEXT_PUBLIC_API_URL;
 if (!configuredUrl) {
   throw new Error('[ERR_API_CONFIG_MISSING] NEXT_PUBLIC_API_URL must be configured.');
 }
-const rawUrl = configuredUrl.replace(/\/+$/, '');
-export const API_BASE_URL = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl}/api`;
+const rawUrl = configuredUrl?.replace(/\/+$/, '') ?? '';
+// Browser requests stay same-origin so refresh/CSRF cookies are first-party.
+// Next.js rewrites /api/* to the backend deployment.
+export const API_BASE_URL = typeof window !== 'undefined' ? '/api' : (rawUrl.endsWith('/api') ? rawUrl : `${rawUrl}/api`);
 
 const CSRF_STORAGE_KEY = 'agentforge_csrf_token';
 
