@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, getApiErrorMessage } from '@/contexts/AuthContext';
 
 // ================================================================
 // AgentForge — Register Page
@@ -48,9 +48,7 @@ export default function RegisterPage() {
       setSuccess('Your account has been created. Opening your workspace…');
       window.setTimeout(() => router.push('/dashboard'), 350);
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-        'Registration failed. Please try again.';
+      const msg = getApiErrorMessage(err, 'Registration failed. Please try again.');
       setError(msg);
     } finally {
       setIsSubmitting(false);
@@ -304,6 +302,8 @@ export default function RegisterPage() {
           padding: 6px 8px;
         }
         .password-toggle:hover { color: var(--text-primary); }
+        .password-input::-ms-reveal,
+        .password-input::-ms-clear { display: none; }
         .auth-error {
           padding: 10px 14px;
           background: rgba(251, 113, 133, 0.1);
