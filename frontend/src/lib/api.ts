@@ -1,11 +1,5 @@
 import axios from 'axios';
 
-// ================================================================
-// AgentForge — Axios HTTP Client
-// Centralized API client with JWT interceptor & refresh logic.
-// All env access flows through this single module.
-// ================================================================
-
 if (!process.env.NEXT_PUBLIC_API_URL) {
   console.warn('[WARN] NEXT_PUBLIC_API_URL is not defined in the environment.');
 }
@@ -16,73 +10,56 @@ if (!configuredUrl) {
 const rawUrl = configuredUrl.replace(/\/+$/, '');
 export const API_BASE_URL = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl}/api`;
 
+const CSRF_STORAGE_KEY = 'agentforge_csrf_token';
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
 let accessToken: string | null = null;
 
-export function setAccessToken(token: string | null) {
-  accessToken = token;
-}
+export function setAccessToken(token: string | null) { accessToken = token; }
+export function getApiBaseUrl(): string { return API_BASE_URL; }
+export function getAccessToken(): string | null { return accessToken; }
 
-export function getApiBaseUrl(): string {
-  return API_BASE_URL;
-}
-
-export function getAccessToken(): string | null {
-  return accessToken;
+export function setCsrfToken(token: string | null) {
+  if (typeof window === 'undefined') return;
+  if (token) window.localStorage.setItem(CSRF_STORAGE_KEY, token);
+  else window.localStorage.removeItem(CSRF_STORAGE_KEY);
 }
 
 function getCsrfToken(): string | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.split('; ').find((cookie) => cookie.startsWith('agentforge_csrf_token='));
-  return match ? decodeURIComponent(match.split('=').slice(1).join('=')) : null;
+  if (typeof window === 'undefined') return null;
+  return window.localStorage.getItem(CSRF_STORAGE_KEY);
 }
 
-api.interceptors.request.use(
-  (config) => {
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
-    }
-    if (
-      typeof config.url === 'string' &&
-      (config.url.includes('/auth/refresh') || config.url.includes('/auth/logout'))
-    ) {
-      const csrfToken = getCsrfToken();
-      if (csrfToken) config.headers['X-CSRF-Token'] = csrfToken;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+api.interceptors.request.use((config) => {
+  if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+  if (typeof config.url === 'string' &&
+      (config.url.includes('/auth/refresh') || config.url.includes('/auth/logout'))) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) config.headers['X-CSRF-Token'] = csrfToken;
+  }
+  return config;
+}, error => Promise.reject(error));
 
 let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (token: string) => void;
-  reject: (err: unknown) => void;
-}> = [];
+let failedQueue: Array<{resolve:(token:string)=>void; reject:(err:unknown)=>void}> = [];
 
 function processQueue(error: unknown, token: string | null = null) {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token!);
-    }
+  failedQueue.forEach(prom => {
+    if (error) prom.reject(error);
+    else prom.resolve(token!);
   });
   failedQueue = [];
 }
 
 api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
+  response => response,
+  async error => {
     const originalRequest = error.config;
-
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
@@ -92,25 +69,19 @@ api.interceptors.response.use(
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({
-            resolve: (token: string) => {
+            resolve: (token) => {
               originalRequest.headers.Authorization = `Bearer ${token}`;
               resolve(api(originalRequest));
             },
-            reject: (err: unknown) => {
-              reject(err);
-            },
+            reject: err => reject(err),
           });
         });
       }
-
       originalRequest._retry = true;
       isRefreshing = true;
-
       try {
         const { data } = await axios.post(
-          `${API_BASE_URL}/auth/refresh`,
-          {},
-          {
+          `${API_BASE_URL}/auth/refresh`, {}, {
             withCredentials: true,
             headers: (() => {
               const csrfToken = getCsrfToken();
@@ -118,25 +89,22 @@ api.interceptors.response.use(
             })(),
           }
         );
-
+        setCsrfToken(data.data.csrfToken ?? null);
         const newToken = data.data.accessToken;
         setAccessToken(newToken);
         processQueue(null, newToken);
-
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
         setAccessToken(null);
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
+        setCsrfToken(null);
+        if (typeof window !== 'undefined') window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
     }
-
     return Promise.reject(error);
   }
 );

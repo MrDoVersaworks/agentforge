@@ -1,176 +1,96 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+const sections = [
+  ['1', 'What we collect', 'AgentForge handles information needed to provide the service. This can include your name and email address, password credentials in protected form, agent configurations, knowledge documents, conversations, messages, and account timestamps. If you contact us, we also receive the name, email address, and message you submit.'],
+  ['2', 'Credentials and API keys', 'If you configure a Gemini API key, the application stores the credential in encrypted form together with the information required to use that encryption. Treat API keys as sensitive and do not place secrets in prompts or documents unless you intend the service to process them.'],
+  ['3', 'How information is used', 'Information is used to authenticate accounts, provide agent and conversation features, store and retrieve knowledge, operate support and contact features, secure the service, enforce access controls, and maintain reliable operation.'],
+  ['4', 'Analytics and site settings', 'The application can be configured with analytics and legal-site settings. Where analytics is enabled, technical information associated with those tools may be processed according to the applicable provider’s terms and privacy documentation.'],
+  ['5', 'Third-party processing', 'AgentForge relies on infrastructure and other providers to operate the application. Your information may therefore be processed by providers acting as part of the service’s technical stack. Third-party services that you choose to connect may also process information under their own terms.'],
+  ['6', 'Security', 'AgentForge uses controls such as authenticated access, password hashing, encrypted storage for configured API credentials, session revocation, and transport security. These measures reduce risk but cannot guarantee absolute security.'],
+  ['7', 'Retention and deletion', 'Information is retained while needed to provide the service and for legitimate security, operational, or legal purposes. Account deletion removes the account and related records according to the application’s configured database relationships, subject to information that must be retained where required.'],
+  ['8', 'Your choices', 'You can review and update available account information through the application. You can also delete your account using the account controls provided in the product. Privacy requests that apply under your local law can be raised through the available contact channel.'],
+  ['9', 'Children', 'AgentForge is not designed to invite children to create accounts. Do not use the service if you are not legally permitted to enter into the applicable agreement.'],
+  ['10', 'Changes and contact', 'This policy may be updated when the service or its data practices change. The effective date above identifies the version published on this page. For privacy questions or requests, use the contact or support channel made available by AgentForge.']
+] as const;
 
-interface LegalDoc {
-  title: string;
-  content: string;
-  version: string;
-  updatedAt: string;
-}
-
-interface LegalPageProps {
-  kind: 'terms_of_service' | 'privacy_policy';
-  fallbackTitle: string;
-  fallbackIntro: string;
-  fallbackSections: { title: string; body: string }[];
-}
-
-function LegalPage({ kind, fallbackTitle, fallbackIntro, fallbackSections }: LegalPageProps) {
-  const [doc, setDoc] = useState<LegalDoc | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    async function fetchDocument() {
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/v1/public/legal/${kind}`, {
-          signal: controller.signal,
-          headers: { Accept: 'application/json' },
-        });
-        if (!res.ok) throw new Error('Unable to load legal document');
-        const json = await res.json();
-        if (!json.success || !json.data) throw new Error('Invalid legal document response');
-        setDoc(json.data);
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') return;
-        setFailed(true);
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    }
-
-    fetchDocument();
-    return () => controller.abort();
-  }, [kind]);
-
-  const title = doc?.title || fallbackTitle;
-  const version = doc?.version || '1.0.0';
-  const updatedAt = doc?.updatedAt ? new Date(doc.updatedAt).toLocaleDateString(undefined, {
-    year: 'numeric', month: 'long', day: 'numeric',
-  }) : null;
-
+export default function PrivacyPolicyPage() {
   return (
-    <main className="min-h-screen bg-[#070a12] text-slate-200">
-      <div className="mx-auto max-w-5xl px-5 pb-20 pt-8 sm:px-8 sm:pt-10">
-        <header className="mb-10 border-b border-white/10 pb-8">
-          <div className="mb-8 flex items-center justify-between gap-4">
-            <Link href="/" className="text-sm font-semibold tracking-tight text-white transition-opacity hover:opacity-70">
-              AgentForge
-            </Link>
-            <div className="flex items-center gap-2 text-sm text-slate-400">
-              <Link href="/terms" className="rounded-lg px-3 py-2 hover:bg-white/5 hover:text-white">Terms</Link>
-              <Link href="/privacy" className="rounded-lg px-3 py-2 hover:bg-white/5 hover:text-white">Privacy</Link>
-              <Link href="/register" className="rounded-lg bg-white px-3 py-2 font-medium text-slate-900 hover:bg-slate-200">Start Building</Link>
-            </div>
+    <main className="legal-page">
+      <div className="legal-shell">
+        <header className="legal-header">
+          <div className="legal-topbar">
+            <Link href="/" className="legal-brand">AgentForge</Link>
+            <nav aria-label="Legal navigation" className="legal-nav">
+              <Link href="/terms">Terms</Link>
+              <Link href="/privacy" aria-current="page">Privacy</Link>
+              <Link href="/register" className="legal-cta">Start Building</Link>
+            </nav>
           </div>
-
-          <div className="max-w-3xl">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Legal</p>
-            <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">{title}</h1>
-            <p className="mt-5 text-base leading-7 text-slate-400">{fallbackIntro}</p>
-            <div className="mt-5 flex flex-wrap gap-2 text-xs text-slate-500">
-              <span className="rounded-full border border-white/10 px-3 py-1.5">Version {version}</span>
-              {updatedAt && <span className="rounded-full border border-white/10 px-3 py-1.5">Updated {updatedAt}</span>}
-            </div>
+          <div className="legal-heading">
+            <span className="legal-eyebrow">Legal</span>
+            <h1>Privacy Policy</h1>
+            <p>A clear summary of the information AgentForge handles, why it is used, and the controls available to you.</p>
+            <div className="legal-meta"><span>Effective September 26, 2026</span><span>Version 1.0</span></div>
           </div>
         </header>
 
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_220px]">
-          <article className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.025] p-6 shadow-2xl shadow-black/10 sm:p-10">
-            {loading ? (
-              <div className="space-y-4" aria-live="polite">
-                <div className="h-4 w-1/3 animate-pulse rounded bg-white/10" />
-                <div className="h-4 w-5/6 animate-pulse rounded bg-white/10" />
-                <div className="h-4 w-4/5 animate-pulse rounded bg-white/10" />
-                <p className="pt-4 text-sm text-slate-500">Loading the current document…</p>
-              </div>
-            ) : doc ? (
-              <div
-                className="legal-content"
-                dangerouslySetInnerHTML={{ __html: doc.content }}
-              />
-            ) : (
-              <div className="space-y-8">
-                {fallbackSections.map((section) => (
-                  <section key={section.title}>
-                    <h2 className="text-xl font-semibold tracking-tight text-white">{section.title}</h2>
-                    <p className="mt-3 leading-7 text-slate-300">{section.body}</p>
-                  </section>
-                ))}
-                {failed && (
-                  <p className="border-t border-white/10 pt-6 text-sm text-slate-500">
-                    The current published document could not be retrieved, so this page is showing the built-in summary.
-                  </p>
-                )}
-              </div>
-            )}
+        <div className="legal-layout">
+          <article className="legal-document">
+            <div className="legal-intro">
+              <strong>Your privacy depends on understanding what the product actually handles.</strong>
+              <span>This policy describes the current application behavior at a product level. It should be read together with the Terms of Service.</span>
+            </div>
+            {sections.map(([number, title, body]) => (
+              <section id={title.toLowerCase().replace(/[^a-z0-9]+/g, '-')} key={number} className="legal-section">
+                <div className="section-number">{number}</div>
+                <div><h2>{title}</h2><p>{body}</p></div>
+              </section>
+            ))}
           </article>
-
-          <aside className="hidden lg:block">
-            <div className="sticky top-8 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">On this page</p>
-              <nav className="mt-4 space-y-1 text-sm text-slate-400">
-                <a href="#acceptance" className="block rounded-lg px-3 py-2 hover:bg-white/5 hover:text-white">Acceptance</a>
-                <a href="#your-data" className="block rounded-lg px-3 py-2 hover:bg-white/5 hover:text-white">Your data</a>
-                <a href="#security" className="block rounded-lg px-3 py-2 hover:bg-white/5 hover:text-white">Security</a>
-                <a href="#responsibilities" className="block rounded-lg px-3 py-2 hover:bg-white/5 hover:text-white">Responsibilities</a>
-                <a href="#contact" className="block rounded-lg px-3 py-2 hover:bg-white/5 hover:text-white">Contact</a>
+          <aside className="legal-sidebar">
+            <div className="legal-sidebar-card">
+              <span>On this page</span>
+              <nav>
+                {sections.map(([number, title]) => <a key={number} href={'#' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}>{number}. {title}</a>)}
               </nav>
             </div>
           </aside>
         </div>
       </div>
-
-      <style jsx global>{`
-        .legal-content {
-          color: rgb(203 213 225);
-          font-size: 0.975rem;
-          line-height: 1.8;
-        }
-        .legal-content h1,
-        .legal-content h2,
-        .legal-content h3 {
-          color: white;
-          font-weight: 650;
-          letter-spacing: -0.02em;
-          scroll-margin-top: 2rem;
-        }
-        .legal-content h1 { font-size: 1.75rem; margin: 0 0 1.5rem; }
-        .legal-content h2 { font-size: 1.25rem; margin: 2.5rem 0 0.75rem; }
-        .legal-content h3 { font-size: 1rem; margin: 1.75rem 0 0.5rem; }
-        .legal-content p { margin: 0.8rem 0; }
-        .legal-content ul,
-        .legal-content ol { margin: 0.9rem 0; padding-left: 1.4rem; }
-        .legal-content li { margin: 0.45rem 0; }
-        .legal-content a { color: rgb(226 232 240); text-decoration: underline; text-underline-offset: 3px; }
-        .legal-content a:hover { color: white; }
-        .legal-content strong { color: white; font-weight: 600; }
-        .legal-content hr { border-color: rgb(255 255 255 / 0.1); margin: 2rem 0; }
+      <style jsx>{`
+        .legal-page{min-height:100vh;background:var(--background);color:var(--text-primary)}
+        .legal-shell{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
+        .legal-header{border-bottom:1px solid var(--border-color);padding-bottom:44px}
+        .legal-topbar{display:flex;align-items:center;justify-content:space-between;gap:20px}
+        .legal-brand{font-weight:800;letter-spacing:-.02em;color:var(--text-primary);text-decoration:none}
+        .legal-nav{display:flex;align-items:center;gap:6px}
+        .legal-nav a{padding:8px 11px;border-radius:8px;color:var(--text-secondary);font-size:.85rem;text-decoration:none}
+        .legal-nav a:hover,.legal-nav a[aria-current="page"]{color:var(--text-primary);background:var(--surface)}
+        .legal-nav .legal-cta{background:var(--text-primary);color:var(--background);font-weight:700;margin-left:6px}
+        .legal-heading{max-width:760px;padding-top:72px}
+        .legal-eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.16em;color:var(--text-secondary);font-weight:700}
+        h1{font-size:clamp(2.3rem,6vw,4.4rem);line-height:1.02;letter-spacing:-.055em;margin:12px 0 20px}
+        .legal-heading p{max-width:680px;color:var(--text-secondary);font-size:1.05rem;line-height:1.75;margin:0}
+        .legal-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px;color:var(--text-secondary);font-size:.78rem}
+        .legal-meta span{border:1px solid var(--border-color);border-radius:999px;padding:7px 11px;background:var(--surface)}
+        .legal-layout{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:48px;padding-top:44px}
+        .legal-document{max-width:760px}
+        .legal-intro{display:grid;gap:8px;padding:20px 22px;border:1px solid var(--border-color);border-radius:14px;background:var(--surface);line-height:1.7;color:var(--text-secondary)}
+        .legal-intro strong{color:var(--text-primary)}
+        .legal-section{display:grid;grid-template-columns:38px 1fr;gap:18px;padding:38px 0;border-bottom:1px solid var(--border-color);scroll-margin-top:24px}
+        .section-number{font-size:.76rem;color:var(--text-secondary);padding-top:5px}
+        h2{font-size:1.18rem;letter-spacing:-.02em;margin:0 0 10px}
+        .legal-section p{color:var(--text-secondary);line-height:1.8;margin:0}
+        .legal-sidebar-card{position:sticky;top:24px;border:1px solid var(--border-color);border-radius:14px;background:var(--surface);padding:18px}
+        .legal-sidebar-card>span{display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.13em;font-weight:700;color:var(--text-secondary);margin-bottom:12px}
+        .legal-sidebar-card nav{display:grid;gap:2px;max-height:65vh;overflow:auto}
+        .legal-sidebar-card a{padding:7px 8px;color:var(--text-secondary);font-size:.78rem;line-height:1.4;text-decoration:none;border-radius:7px}
+        .legal-sidebar-card a:hover{color:var(--text-primary);background:var(--background)}
+        @media(max-width:800px){.legal-layout{grid-template-columns:1fr}.legal-sidebar{display:none}.legal-shell{padding-inline:18px}.legal-heading{padding-top:54px}.legal-nav a:not(.legal-cta){display:none}}
+        @media(max-width:480px){.legal-nav .legal-cta{margin-left:0}.legal-header{padding-bottom:32px}.legal-section{grid-template-columns:28px 1fr;gap:12px}.legal-shell{padding-top:18px}}
       `}</style>
     </main>
-  );
-}
-
-export default function TermsOfServicePage() {
-  return (
-    <LegalPage
-      kind="privacy_policy"
-      fallbackTitle="Privacy Policy"
-      fallbackIntro="This policy explains what information AgentForge handles, why it is used, how it is protected, and the choices available to you."
-      fallbackSections={[
-        { title: 'Information we handle', body: 'Depending on how you use AgentForge, this may include account details, agent configurations, prompts, documents, conversations, and technical information needed to operate and secure the service.' },
-        { title: 'How information is used', body: 'Information is used to provide the service, authenticate accounts, operate and secure infrastructure, respond to support requests, and maintain and improve reliability.' },
-        { title: 'Credentials and sensitive data', body: 'Credentials and other sensitive values should be treated as confidential. Where the application encrypts sensitive credentials before storage, encryption protects the stored value, but no internet service can guarantee absolute security.' },
-        { title: 'Sharing and service providers', body: 'Information may be processed by infrastructure and service providers needed to operate AgentForge, subject to the applicable agreements and security controls. AgentForge does not sell your personal information merely because it is processed by a service provider.' },
-        { title: 'Retention and deletion', body: 'Information is retained for as long as reasonably necessary to provide the service, meet legal or security requirements, and resolve disputes. Account deletion and other deletion requests are handled according to the available product controls and applicable requirements.' },
-        { title: 'Your choices and contact', body: 'You may contact AgentForge through its support channel with questions about your information or this policy. If a privacy right applies to you, the request will be handled as required by applicable law.' },
-      ]}
-    />
   );
 }

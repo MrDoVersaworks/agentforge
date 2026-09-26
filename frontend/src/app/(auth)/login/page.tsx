@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, getApiErrorMessage } from '@/contexts/AuthContext';
 
 // ================================================================
 // AgentForge — Login Page
@@ -25,9 +25,7 @@ export default function LoginPage() {
       await login(email, password);
       router.push('/dashboard');
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-        'Invalid credentials. Please try again.';
+      const msg = getApiErrorMessage(err, 'Invalid credentials. Please try again.');
       setError(msg);
     } finally {
       setIsSubmitting(false);
@@ -202,6 +200,8 @@ export default function LoginPage() {
           padding: 6px 8px;
         }
         .password-toggle:hover { color: var(--text-primary); }
+        .password-input::-ms-reveal,
+        .password-input::-ms-clear { display: none; }
         .auth-error {
           padding: 10px 14px;
           background: rgba(251, 113, 133, 0.1);
