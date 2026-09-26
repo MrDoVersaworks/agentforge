@@ -4,7 +4,7 @@ import { validateEmbeddingDimension } from '../utils/embedding.js';
 
 const EMBEDDING_DIMENSION = 768;
 const EMBEDDING_MODEL = 'gemini-embedding-001';
-const GEMINI_EMBEDDING_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent';
+const GEMINI_EMBEDDING_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent`;
 
 type ChatHistoryEntry = {
   role: 'user' | 'model';
