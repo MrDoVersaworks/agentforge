@@ -36,7 +36,10 @@ test.describe('AgentForge responsive public experience', () => {
 test('auth pages expose password visibility controls', async ({ page }) => {
   for (const path of ['/login', '/register']) {
     await page.goto(path, { waitUntil: 'commit', timeout: 10000 });
-    await expect(page.getByRole('button', { name: 'Show password' })).toBeVisible();
+    const passwordToggle = page.getByRole('button', { name: 'Show password' });
+    await expect(passwordToggle).toBeVisible();
+    await passwordToggle.click();
+    await expect(page.getByRole('button', { name: 'Hide password' })).toBeVisible();
     if (path === '/register') {
       await expect(page.getByRole('button', { name: 'Show confirmation password' })).toBeVisible();
     }
@@ -46,7 +49,7 @@ test('auth pages expose password visibility controls', async ({ page }) => {
   test('legal pages render with clear navigation and substantive fallback content', async ({ page }) => {
     for (const path of ['/terms', '/privacy']) {
       await page.goto(path, { waitUntil: 'commit', timeout: 10000 });
-      await expect(page.getByRole('link', { name: 'AgentForge' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'AgentForge', exact: true })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Start Building' })).toBeVisible();
       await expect(page.getByRole('link', { name: path === '/terms' ? 'Privacy' : 'Terms' })).toBeVisible();
       await expect(page.getByText('Legal', { exact: true })).toBeVisible();
