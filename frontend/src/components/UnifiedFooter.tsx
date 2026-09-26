@@ -17,8 +17,12 @@ export function UnifiedFooter({
     <footer className="site-footer">
       <div className="site-footer-inner">
         <div className="site-footer-brand">
+          <span className="site-footer-kicker">ABOUT</span>
           <span className="site-footer-name">{platformName}</span>
-          <span>Engineered with {techStack}.</span>
+          <span className="site-footer-description">
+            Build focused AI agents around the knowledge that matters to you.
+          </span>
+          <span className="site-footer-tech">Engineered with {techStack}.</span>
         </div>
 
         {contactLink ? (

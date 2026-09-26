@@ -550,3 +550,129 @@ The assistant cannot perform a real browser login with the user's credentials fr
 
 ### Migration proof status
 Production migration execution remains UNVERIFIED at the build-log level because the available Vercel build-log connector is unavailable. CI migration smoke testing and READY deployments prove build/test health, not that production migration SQL was executed. Do not mark this subfinding closed until production build-log evidence or equivalent direct production schema evidence is obtained.
+
+## 2026-09-26 — authentication context split and stale bootstrap remediation
+
+### Original behavior
+Production login returned HTTP 200, but the dashboard could immediately disappear and redirect back to /login. Vercel runtime logs showed successful login/profile/refresh requests interspersed with refresh 401 responses.
+
+Source inspection established a concrete frontend state defect:
+- The root frontend/src/app/layout.tsx already mounted AuthProvider.
+- frontend/src/app/(auth)/layout.tsx mounted a second, independent AuthProvider.
+- Therefore the login page consumed the nested provider and stored the successful login only in that provider.
+- The dashboard route consumed the root provider. On navigation, the nested provider was unmounted, so the dashboard saw the root provider's unauthenticated state and redirected to /login.
+- The root provider also started a bootstrap /auth/refresh when the application mounted. Its result could complete after a newer login/register operation and previously could clear authentication state established by that newer operation.
+
+This explains the observed production symptom without requiring credentials or a backend authentication failure: /auth/login can succeed while the dashboard still receives a different, unauthenticated React auth context.
+
+### Intended remediation behavior
+- Exactly one AuthProvider owns authentication state for the entire application.
+- Login and registration must update the same context consumed by protected routes.
+- A stale bootstrap refresh must never clear or overwrite state created by a newer login, registration, or logout.
+- Refresh-token rotation, CSRF validation, access-token validation, durable sessions, and backend authentication semantics must remain unchanged.
+
+### Changes
+- Removed the duplicate AuthProvider from frontend/src/app/(auth)/layout.tsx; the root provider is now the single provider across auth and dashboard route groups.
+- Added a monotonic auth-operation ID in frontend/src/contexts/AuthContext.tsx.
+- Login, registration, and logout advance that operation ID.
+- Bootstrap refresh and its subsequent profile request capture their operation ID and discard stale results if a newer auth operation has started.
+- This is a frontend state-coordination fix; it does not weaken authentication checks or change token/session security semantics.
+
+### Proof requirements
+Positive proof requires frontend type checking/building and the existing public E2E suite to pass. The critical regression scenario is: a login started while bootstrap refresh is pending must leave the authenticated user and access token intact after the stale bootstrap request completes, and /dashboard must remain accessible.
+
+Backend auth behavior and refresh-token rotation must remain covered by the existing backend contract tests.
+
+
+## 2026-09-26 — settings/profile simplification and public about presentation
+
+### Original behavior
+The authenticated Settings screen combined Gemini credentials/model configuration, editable profile information (name and read-only email), and account deletion. The public footer contained only a minimal product/technology line and legal links, leaving the public product-introduction area visually underdeveloped.
+
+### Intended remediation behavior
+Settings should stay focused on product configuration and account security. Redundant profile-management UI should not occupy a full settings card when the application does not otherwise present profile management as a distinct product concern. The public footer/about area should have deliberate hierarchy, readable spacing, and a concise product description without changing navigation or legal links.
+
+### Behavior that must remain
+- Gemini API key/model configuration remains functional.
+- Account deletion remains password-protected and destructive behavior is unchanged.
+- Authentication, authorization, session, CSRF, and API behavior are untouched by this UI cleanup.
+- Terms of Service and Privacy Policy links remain available.
+- No backend profile endpoint or stored user data is removed merely because the redundant UI is removed.
+
+### Changes
+- Removed the Profile Settings card, profile-name form state, and profile-save handler from the Settings page.
+- Tightened Settings layout spacing and made the remaining configuration/danger-zone hierarchy more intentional.
+- Refined the public footer/about presentation with an explicit ABOUT kicker, concise product description, stronger product-name hierarchy, improved spacing, and a cleaner responsive layout.
+
+### Proof requirement
+GitHub CI must pass frontend typecheck/build and public E2E after these changes. The settings page must render only the remaining configuration and account-security sections; the public footer must retain Contact (when configured), Terms, and Privacy navigation.
+
+
+
+## 2026-09-26 — production login redirect root-cause confirmation
+
+### Observed behavior
+The reported production symptom was: credentials are accepted, but the application does not reliably enter the dashboard; after opening the Vercel deployment and clicking Visit, a fresh application load can reach the dashboard.
+
+### Evidence
+Production backend runtime logs for deployment `dpl_A12rUM7541fcSVjTBXZF2LQ1a4wN` on `main` show successful authentication and profile requests:
+- POST `/api/auth/login` returned 200 repeatedly.
+- GET `/api/auth/profile` returned 200.
+- POST `/api/auth/refresh` returned both 200 and repeated 401 responses, including bursts of multiple 401 responses at the same second.
+
+Source inspection of the production `main` commit established the client-side cause:
+- `frontend/src/app/layout.tsx` mounts an application-wide `AuthProvider`.
+- `frontend/src/app/(auth)/layout.tsx` mounts a second independent `AuthProvider`.
+- The login page therefore updates the auth provider owned by the auth route group, while the dashboard consumes the root provider.
+- Both providers also execute their bootstrap `POST /auth/refresh` on mount.
+- The backend intentionally performs one-time refresh-token rotation: a successful refresh revokes the presented refresh token and creates a replacement. A concurrent second refresh using the same cookie therefore receives the replay/invalid-token path and HTTP 401.
+- The root provider's bootstrap failure can clear its access token/user state. When navigation moves from the auth route group to the dashboard, the nested provider is unmounted and the dashboard is left with the root provider's state. This directly explains why a successful login can still be followed by a redirect to `/login`.
+- A fresh Vercel Visit starts a new application lifecycle with one root provider, so a fresh refresh can establish the session and make the dashboard accessible. This matches the reported recovery behavior.
+
+### Root cause
+The production issue was not a basic login or backend connectivity failure. It was the interaction of **duplicate frontend authentication contexts** with **one-time refresh-token rotation**. The duplicate providers caused concurrent bootstrap refreshes and split authentication state across route groups.
+
+### Intended remediation
+- Exactly one `AuthProvider` must own authentication state.
+- Login/register state must be the same state consumed by protected dashboard routes.
+- Bootstrap refresh/profile results that belong to an older auth operation must not overwrite a newer login/register/logout state.
+- Backend refresh-token rotation and security semantics must remain unchanged.
+
+### Remediation applied
+The existing PR #7 branch removes the duplicate auth provider from the auth route group and adds a monotonic auth-operation guard in `AuthContext.tsx`. This is the direct remediation for the confirmed root cause.
+
+### Production-state clarification
+At the time of this confirmation, production `main` still points to commit `10ee7dbac56bec7dc49be0fa10e2993acb2f68cc`, whose source still contains the duplicate provider. Therefore the root-cause remediation is **not yet production-live**. The corresponding frontend preview deployment for the remediation branch is READY, but it is not a production deployment.
+
+### Proof requirements
+Closure requires:
+1. CI passes on the final remediation head.
+2. The frontend production deployment is built from the remediation commit.
+3. A production login test shows login success followed by dashboard access without returning to `/login`.
+4. Runtime logs no longer show the duplicate-bootstrap refresh pattern associated with the two-provider lifecycle.
+5. The existing backend refresh-token rotation tests continue to pass.
+
+## 2026-09-26 — Danger Zone/account-deletion UI refinement
+
+### Original behavior
+The Danger Zone already opened a password-confirmation dialog and called the existing `DELETE /api/auth/account` flow. The functionality was correct, but the presentation was visually heavy and lacked clear hierarchy between the security warning, destructive consequence, password confirmation, and final action.
+
+### Intended remediation behavior
+The Danger Zone should look like a deliberate account-security section rather than a generic red card. The confirmation dialog should make the permanence and affected data clear before asking for the password, with balanced action hierarchy and responsive behavior.
+
+### Behavior that must remain
+- Account deletion remains explicitly initiated by the user.
+- Password confirmation remains required.
+- The existing `DELETE /api/auth/account` endpoint and request payload remain unchanged.
+- Successful deletion still clears the local auth state and returns the user to login.
+- Failed deletion still leaves the account/session intact and surfaces the existing error.
+- No backend deletion semantics or authorization behavior changes.
+
+### Changes
+- Refined the Danger Zone card with a compact security kicker, structured heading, restrained destructive treatment, explicit consequence text, and cleaner action alignment.
+- Redesigned the confirmation modal with a clearer permanent-action label, concise consequence list, improved spacing, stronger hierarchy, and responsive button stacking.
+- Added an accessible description relationship to the confirmation dialog.
+- No deletion logic was changed.
+
+### Proof requirements
+Frontend typecheck/build and the relevant E2E suite must pass. Manual authenticated verification should confirm the modal opens, dismissal clears the password, empty confirmation cannot submit, successful deletion follows the existing logout/redirect path, and an invalid password does not delete the account.

@@ -26,10 +26,6 @@ export default function SettingsPage() {
   const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash');
   const [savingKey, setSavingKey] = useState(false);
 
-  // ── Profile States ──
-  const [name, setName] = useState('');
-  const [savingProfile, setSavingProfile] = useState(false);
-
   // ── Account Deletion States ──
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
@@ -38,7 +34,6 @@ export default function SettingsPage() {
   // ── Hydrate forms with user info ──
   useEffect(() => {
     if (user) {
-      setName(user.name ? user.name : '');
       setGeminiModel(user.geminiModel ? user.geminiModel : 'gemini-2.5-flash');
     }
   }, [user]);
@@ -66,28 +61,6 @@ export default function SettingsPage() {
       addToast('error', extractErrorMessage(err, 'Failed to update Gemini settings.'));
     } finally {
       setSavingKey(false);
-    }
-  };
-
-  // ── Save Profile Name ──
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) {
-      addToast('error', 'Name cannot be empty.');
-      return;
-    }
-    setSavingProfile(true);
-
-    try {
-      await api.patch('/settings', {
-        name: name.trim(),
-      });
-      await refreshUser();
-      addToast('success', 'Profile updated successfully.');
-    } catch (err: unknown) {
-      addToast('error', extractErrorMessage(err, 'Failed to update profile.'));
-    } finally {
-      setSavingProfile(false);
     }
   };
 
@@ -121,12 +94,12 @@ export default function SettingsPage() {
       <div className="page-header">
         <div className="page-header-text">
           <h1>Global Settings</h1>
-          <p>Configure your model credentials, profile, and account</p>
+          <p>Configure your model access and account security</p>
         </div>
       </div>
 
       <div className="settings-content-layout">
-        {/* ── Left Column: Credentials & Profile ── */}
+        {/* ── LLM Configuration ── */}
         <div className="settings-form-column">
           {/* Card 1: LLM Setup */}
           <div className="glass settings-card">
@@ -178,90 +151,60 @@ export default function SettingsPage() {
             </form>
           </div>
 
-          {/* Card 2: Profile Setup */}
-          <div className="glass settings-card">
-            <div className="card-header-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="cyan-icon">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-              <h3>Profile Settings</h3>
-            </div>
-            <p className="card-desc">Update your personal account display information.</p>
-
-            <form onSubmit={handleSaveProfile}>
-              <div className="form-group">
-                <label className="input-label">Full Name</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  maxLength={50}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="input-label">Email Address</label>
-                <input
-                  type="email"
-                  className="input-field disabled-field"
-                  value={user?.email ? user?.email : ''}
-                  disabled
-                />
-                <span className="field-hint">Email address cannot be changed.</span>
-              </div>
-
-              <button type="submit" className="btn btn-primary" disabled={savingProfile}>
-                {savingProfile ? 'Updating Profile...' : 'Save Profile'}
-              </button>
-            </form>
-          </div>
         </div>
 
         {/* ── Right Column: Danger Zone ── */}
         <div className="settings-danger-column">
           <div className="glass danger-card">
-            <div className="danger-header">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="rose-icon">
-                <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              <h3>Danger Zone</h3>
-            </div>
-            <p className="danger-desc">
-              Actions in this section are highly destructive. Please double check before executing.
-            </p>
-
-            <div className="danger-action-row">
-              <div className="action-text">
-                <h4>Delete Account & Data</h4>
-                <p>Delete your profile and permanently erase all custom AI agents, document chunks, and chat history.</p>
+            <div className="danger-heading">
+              <div className="danger-heading-icon" aria-hidden="true">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3 21 6.5v5.6c0 4.2-2.9 7.9-9 9.9-6.1-2-9-5.7-9-9.9V6.5L12 3Z" />
+                  <path d="M12 8v4" />
+                  <path d="M12 15.5h.01" />
+                </svg>
               </div>
-              <button
-                type="button"
-                className="btn btn-danger"
-                disabled={deletingAccount}
-                onClick={() => setShowDeleteAccount(true)}
-              >
+              <div>
+                <span className="danger-kicker">ACCOUNT SECURITY</span>
+                <h3>Danger Zone</h3>
+              </div>
+            </div>
+            <div className="danger-copy">
+              <h4>Delete Account &amp; Data</h4>
+              <p>Permanently remove your account and the data created under it. This action cannot be reversed.</p>
+            </div>
+            <div className="danger-action-row">
+              <div className="danger-consequence">
+                <span className="danger-consequence-dot" aria-hidden="true" />
+                <span>Agents, documents, API credentials, and chat history will be erased.</span>
+              </div>
+              <button type="button" className="btn btn-danger" disabled={deletingAccount} onClick={() => setShowDeleteAccount(true)}>
                 Delete Account
               </button>
             </div>
           </div>
         </div>
-      </div>
-
       {showDeleteAccount && (
         <div className="delete-modal-backdrop" role="presentation" onClick={() => { if (!deletingAccount) { setShowDeleteAccount(false); setDeletePassword(''); } }}>
-          <section className="delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-account-title" onClick={(event) => event.stopPropagation()}>
-            <div className="delete-modal-icon" aria-hidden="true">!</div>
+          <section className="delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-account-title" aria-describedby="delete-account-description" onClick={(event) => event.stopPropagation()}>
+            <div className="delete-modal-topline">
+              <div className="delete-modal-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3 21 6.5v5.6c0 4.2-2.9 7.9-9 9.9-6.1-2-9-5.7-9-9.9V6.5L12 3Z" />
+                  <path d="M12 8v4" />
+                  <path d="M12 15.5h.01" />
+                </svg>
+              </div>
+              <span className="delete-modal-eyebrow">Permanent action</span>
+            </div>
             <h2 id="delete-account-title">Delete your account?</h2>
-            <p>
-              This permanently removes your account, agents, documents, API credentials, and conversation history. This cannot be undone.
-            </p>
-            <label className="delete-password-label" htmlFor="delete-account-password">Enter your password to confirm</label>
+            <p id="delete-account-description">Your account and everything created under it will be permanently removed. There is no recovery after deletion.</p>
+            <div className="delete-modal-list" aria-label="Data that will be deleted">
+              <span>Agents and knowledge documents</span>
+              <span>Stored API credentials and settings</span>
+              <span>Conversation history</span>
+            </div>
+            <label className="delete-password-label" htmlFor="delete-account-password">Confirm with your password</label>
             <input
               id="delete-account-password"
               className="input-field"
@@ -291,38 +234,93 @@ export default function SettingsPage() {
           display: grid;
           place-items: center;
           padding: 20px;
-          background: rgba(3, 5, 12, 0.72);
-          backdrop-filter: blur(10px);
+          background: rgba(3, 5, 12, 0.78);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
         }
         .delete-modal {
-          width: min(100%, 500px);
-          padding: 32px;
-          border: 1px solid rgba(251, 113, 133, 0.22);
-          border-radius: 20px;
-          background: var(--surface, #10131d);
-          box-shadow: 0 24px 80px rgba(0,0,0,.35);
+          width: min(100%, 480px);
+          padding: 28px;
+          border: 1px solid rgba(251, 113, 133, 0.2);
+          border-radius: 18px;
+          background: var(--bg-secondary, #10131d);
+          box-shadow: 0 28px 90px rgba(0,0,0,.42);
+        }
+        .delete-modal-topline {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 16px;
         }
         .delete-modal-icon {
-          width: 42px;
-          height: 42px;
+          width: 38px;
+          height: 38px;
           display: grid;
           place-items: center;
-          margin-bottom: 16px;
-          border-radius: 50%;
-          background: rgba(251, 113, 133, 0.12);
+          border: 1px solid rgba(251, 113, 133, 0.2);
+          border-radius: 10px;
+          background: rgba(251, 113, 133, 0.08);
           color: var(--accent-rose);
-          font-weight: 800;
-          border: 1px solid rgba(251, 113, 133, 0.18);
         }
-        .delete-modal h2 { font-size: 1.15rem; font-weight: 750; margin-bottom: 8px; }
-        .delete-modal p { color: var(--text-secondary); font-size: .88rem; line-height: 1.65; }
-        .delete-password-label { display: block; margin-top: 20px; margin-bottom: 7px; font-size: .78rem; font-weight: 650; color: var(--text-primary); }
-        .delete-modal-actions { display: grid; grid-template-columns: 1fr 1.15fr; gap: 12px; margin-top: 24px; }
-        .delete-modal-actions .btn { min-height: 46px; }
-        @media (max-width: 560px) {
-          .delete-modal-actions { grid-template-columns: 1fr; }
-          .delete-modal-actions .btn { width: 100%; }
+        .delete-modal-eyebrow {
+          color: var(--accent-rose);
+          font-size: 0.68rem;
+          font-weight: 750;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
         }
+        .delete-modal h2 {
+          font-size: 1.2rem;
+          font-weight: 760;
+          letter-spacing: -0.015em;
+          margin-bottom: 8px;
+        }
+        .delete-modal > p {
+          color: var(--text-secondary);
+          font-size: .84rem;
+          line-height: 1.65;
+        }
+        .delete-modal-list {
+          display: grid;
+          gap: 7px;
+          margin-top: 17px;
+          padding: 13px 14px;
+          border: 1px solid var(--glass-border);
+          border-radius: 11px;
+          background: rgba(255,255,255,0.018);
+        }
+        .delete-modal-list span {
+          position: relative;
+          padding-left: 14px;
+          color: var(--text-secondary);
+          font-size: .75rem;
+          line-height: 1.45;
+        }
+        .delete-modal-list span::before {
+          content: "";
+          position: absolute;
+          left: 0;
+          top: 0.55em;
+          width: 4px;
+          height: 4px;
+          border-radius: 50%;
+          background: var(--accent-rose);
+        }
+        .delete-password-label {
+          display: block;
+          margin-top: 20px;
+          margin-bottom: 7px;
+          font-size: .76rem;
+          font-weight: 650;
+          color: var(--text-primary);
+        }
+        .delete-modal-actions {
+          display: grid;
+          grid-template-columns: 1fr 1.15fr;
+          gap: 10px;
+          margin-top: 20px;
+        }
+        .delete-modal-actions .btn { min-height: 44px; }
 
         .settings-page {
           width: 100%;
@@ -342,9 +340,9 @@ export default function SettingsPage() {
         /* ── Layout ── */
         .settings-content-layout {
           display: grid;
-          grid-template-columns: 1.2fr 1fr;
-          gap: var(--space-xl);
-          margin-top: var(--space-xl);
+          grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr);
+          gap: 24px;
+          margin-top: 24px;
         }
 
         @media (max-width: 1024px) {
@@ -355,8 +353,8 @@ export default function SettingsPage() {
 
         /* ── Settings Card ── */
         .settings-card {
-          padding: 28px;
-          margin-bottom: var(--space-xl);
+          padding: 24px;
+          margin-bottom: 0;
         }
         .card-header-icon {
           display: flex;
@@ -432,58 +430,102 @@ export default function SettingsPage() {
 
         /* ── Danger Card ── */
         .danger-card {
-          border-color: rgba(251, 113, 133, 0.25);
-          background: rgba(251, 113, 133, 0.02);
-          padding: 28px;
+          padding: 24px;
+          border: 1px solid rgba(251, 113, 133, 0.22);
+          background: linear-gradient(180deg, rgba(251, 113, 133, 0.045), rgba(251, 113, 133, 0.018));
+          box-shadow: none;
         }
         .danger-card:hover {
-          border-color: rgba(251, 113, 133, 0.4);
-          box-shadow: 0 0 24px rgba(251, 113, 133, 0.08);
-          background: rgba(251, 113, 133, 0.04);
+          border-color: rgba(251, 113, 133, 0.3);
+          box-shadow: none;
+          background: linear-gradient(180deg, rgba(251, 113, 133, 0.055), rgba(251, 113, 133, 0.022));
         }
-        .danger-header {
+        .danger-heading {
           display: flex;
           align-items: center;
           gap: 12px;
-          margin-bottom: 12px;
+        }
+        .danger-heading-icon {
+          width: 38px;
+          height: 38px;
+          flex: 0 0 38px;
+          display: grid;
+          place-items: center;
+          border: 1px solid rgba(251, 113, 133, 0.2);
+          border-radius: 11px;
+          background: rgba(251, 113, 133, 0.08);
           color: var(--accent-rose);
         }
-        .danger-header h3 {
-          font-size: 1.1rem;
-          font-weight: 700;
+        .danger-kicker {
+          display: block;
+          margin-bottom: 3px;
+          color: var(--accent-rose);
+          font-size: 0.63rem;
+          font-weight: 800;
+          letter-spacing: 0.13em;
         }
-        .danger-desc {
-          font-size: 0.85rem;
-          color: var(--text-secondary);
+        .danger-heading h3 {
+          font-size: 1.05rem;
+          font-weight: 750;
+          color: var(--text-primary);
+        }
+        .danger-copy {
+          margin-top: 20px;
+          padding-bottom: 18px;
           border-bottom: 1px solid var(--glass-border);
-          padding-bottom: 20px;
-          margin-bottom: 24px;
+        }
+        .danger-copy h4 {
+          font-size: 0.9rem;
+          font-weight: 700;
+          margin-bottom: 5px;
+        }
+        .danger-copy p {
+          max-width: 520px;
+          color: var(--text-secondary);
+          font-size: 0.79rem;
           line-height: 1.6;
         }
-
         .danger-action-row {
           display: flex;
-          justify-content: space-between;
           align-items: center;
-          gap: 20px;
+          justify-content: space-between;
+          gap: 18px;
+          padding-top: 18px;
         }
-        .action-text h4 {
-          font-size: 0.92rem;
-          font-weight: 700;
-          margin-bottom: 4px;
-        }
-        .action-text p {
-          font-size: 0.8rem;
-          color: var(--text-secondary);
+        .danger-consequence {
+          display: flex;
+          align-items: flex-start;
+          gap: 9px;
+          color: var(--text-tertiary);
+          font-size: 0.72rem;
           line-height: 1.5;
+        }
+        .danger-consequence-dot {
+          width: 5px;
+          height: 5px;
+          flex: 0 0 5px;
+          margin-top: 6px;
+          border-radius: 50%;
+          background: var(--accent-rose);
         }
 
         @media (max-width: 768px) {
           .danger-action-row {
             flex-direction: column;
-            align-items: flex-start;
+            align-items: stretch;
           }
           .danger-action-row .btn {
+            width: 100%;
+          }
+        }
+        @media (max-width: 560px) {
+          .delete-modal {
+            padding: 24px;
+          }
+          .delete-modal-actions {
+            grid-template-columns: 1fr;
+          }
+          .delete-modal-actions .btn {
             width: 100%;
           }
         }
