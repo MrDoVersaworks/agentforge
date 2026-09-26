@@ -3,7 +3,8 @@ import { logger } from '../utils/logger.js';
 import { validateEmbeddingDimension } from '../utils/embedding.js';
 
 const EMBEDDING_DIMENSION = 768;
-const DEFAULT_EMBEDDING_MODEL = 'text-embedding-004';
+const EMBEDDING_MODEL = 'gemini-embedding-001';
+const GEMINI_EMBEDDING_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent`;
 
 type ChatHistoryEntry = {
   role: 'user' | 'model';
@@ -55,10 +56,31 @@ export async function generateEmbedding(
   logger.info('AI', 'Generating embedding for text (length: ' + text.length + ')');
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: DEFAULT_EMBEDDING_MODEL });
-    const result = await model.embedContent(text);
-    const embeddingValues: unknown = result.embedding.values;
+    const response = await fetch(GEMINI_EMBEDDING_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        content: {
+          parts: [{ text }],
+        },
+        output_dimensionality: EMBEDDING_DIMENSION,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(
+        `[ERR_GEMINI_EMBEDDING_API] Gemini embedding request failed with HTTP ${response.status}: ${errorBody}`
+      );
+    }
+
+    const result: unknown = await response.json();
+    const embeddingValues = (
+      result as { embedding?: { values?: unknown } }
+    ).embedding?.values;
 
     if (!isNumberArray(embeddingValues) || embeddingValues.length === 0) {
       throw new Error('[ERR_GEMINI_EMBEDDING_INVALID] Gemini API returned an invalid embedding.');
@@ -68,7 +90,7 @@ export async function generateEmbedding(
   } catch (error: unknown) {
     logger.error('AI', 'Embedding generation failed:', error);
     throw new Error(
-      '[ERR_EMBEDDING_GENERATION] Failed to generate embedding from Gemini API. Please check your API key.',
+      '[ERR_EMBEDDING_GENERATION] Failed to generate embedding from Gemini API.',
       { cause: error }
     );
   }

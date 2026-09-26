@@ -23,11 +23,22 @@ export default function DashboardPage() {
   const [systemPrompt, setSystemPrompt] = useState('');
   const [temperature, setTemperature] = useState(0.7);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // ── Fetch Agents on load ──
   useEffect(() => {
     fetchAgents();
   }, [fetchAgents]);
+
+  useEffect(() => {
+    const savedView = window.localStorage.getItem('agentforge-agent-view');
+    if (savedView === 'grid' || savedView === 'list') setViewMode(savedView);
+  }, []);
+
+  const handleViewModeChange = (mode: 'grid' | 'list') => {
+    setViewMode(mode);
+    window.localStorage.setItem('agentforge-agent-view', mode);
+  };
 
   const openCreateModal = () => {
     setEditingAgent(null);
@@ -133,18 +144,35 @@ export default function DashboardPage() {
           <h1>AI Agents</h1>
           <p>Create and customize autonomous assistants grounded in your specific data</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreateModal}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          New Agent
-        </button>
+        <div className="page-header-actions">
+          <div className="view-toggle" role="group" aria-label="Agent view">
+            <button type="button" className={`view-toggle-button ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => handleViewModeChange('grid')} aria-pressed={viewMode === 'grid'} title="Grid view">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+              Grid
+            </button>
+            <button type="button" className={`view-toggle-button ${viewMode === 'list' ? 'active' : ''}`} onClick={() => handleViewModeChange('list')} aria-pressed={viewMode === 'list'} title="List view">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+              List
+            </button>
+          </div>
+          <button className="btn btn-primary" onClick={openCreateModal}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            New Agent
+          </button>
+        </div>
       </div>
 
       {/* ── Agent Grid / Empty State ── */}
       {isLoading ? (
-        <div className="agents-grid">
+        <div className={viewMode === 'list' ? 'agents-grid agents-list' : 'agents-grid'}>
           {[1, 2, 3].map((n) => (
             <div key={n} className="agent-card-loading glass">
               <div className="skeleton title-skeleton" />
@@ -174,7 +202,7 @@ export default function DashboardPage() {
       ) : (
         <div className="agents-grid">
           {agents.map((agent) => (
-            <div key={agent.id} className="agent-card glass">
+            <div key={agent.id} className={viewMode === 'list' ? 'agent-card agent-card-list glass' : 'agent-card glass'}>
               <div className="agent-card-header">
                 <h3 className="agent-name">{agent.name}</h3>
                 <div className="agent-meta">
@@ -201,7 +229,7 @@ export default function DashboardPage() {
 
               <div className="agent-actions">
                 <button
-                  className="btn btn-primary btn-sm flex-1"
+                  className="btn btn-primary btn-sm agent-chat-action"
                   onClick={() => router.push(`/chat/${agent.id}`)}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -380,6 +408,11 @@ export default function DashboardPage() {
           color: var(--text-secondary);
           font-size: 0.9rem;
         }
+        .page-header-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+        .view-toggle { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--glass-border); border-radius: var(--radius-md); background: var(--bg-elevated); }
+        .view-toggle-button { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 7px 10px; border: 0; border-radius: calc(var(--radius-md) - 2px); background: transparent; color: var(--text-tertiary); font-size: 0.78rem; font-weight: 650; cursor: pointer; transition: all var(--transition-fast); }
+        .view-toggle-button:hover { color: var(--text-primary); }
+        .view-toggle-button.active { color: var(--text-primary); background: var(--glass-bg); box-shadow: var(--shadow-sm); }
 
         /* ── Agent Grid ── */
         .agents-grid {
@@ -389,11 +422,27 @@ export default function DashboardPage() {
         }
 
         .agent-card {
-          padding: 24px;
+          padding: 22px;
           display: flex;
           flex-direction: column;
-          min-height: 240px;
+          min-height: 248px;
+          border-radius: var(--radius-lg);
+          transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
         }
+        .agent-card:hover { transform: translateY(-2px); border-color: rgba(139, 92, 246, 0.28); box-shadow: var(--shadow-md); }
+        .agent-card-list {
+          display: grid;
+          grid-template-columns: minmax(220px, 1.05fr) minmax(280px, 2fr) minmax(150px, 0.7fr) auto;
+          align-items: center;
+          gap: 22px;
+          min-height: 0;
+          padding: 18px 20px;
+        }
+        .agent-card-list .agent-card-header { margin-bottom: 0; }
+        .agent-card-list .agent-prompt-preview { margin-bottom: 0; -webkit-line-clamp: 2; }
+        .agent-card-list .agent-stats { margin-bottom: 0; padding: 0; border: 0; gap: 20px; }
+        .agent-card-list .agent-actions { justify-content: flex-end; width: auto; margin-top: 0; }
+        .agent-chat-action { min-width: 82px; }
         .agent-card-header {
           display: flex;
           justify-content: space-between;
@@ -447,10 +496,11 @@ export default function DashboardPage() {
         }
 
         .agent-actions {
-          display: flex;
+          display: grid;
+          grid-template-columns: minmax(82px, 1fr) minmax(74px, 0.8fr) 38px 38px;
           gap: 8px;
+          margin-top: auto;
         }
-        .flex-1 { flex: 1; }
         .hover-rose:hover {
           color: var(--accent-rose) !important;
           background: rgba(251, 113, 133, 0.08) !important;
@@ -554,9 +604,12 @@ export default function DashboardPage() {
             flex-direction: column;
             align-items: flex-start;
           }
-          .page-header .btn {
-            width: 100%;
-          }
+          .page-header-actions { width: 100%; flex-direction: column; align-items: stretch; }
+          .page-header-actions .btn { width: 100%; }
+          .view-toggle { width: 100%; }
+          .view-toggle-button { flex: 1; justify-content: center; }
+          .agent-card-list { grid-template-columns: 1fr; gap: 14px; }
+          .agent-card-list .agent-actions { width: 100%; }
           .warning-banner-inner {
             flex-direction: column;
             align-items: flex-start;
