@@ -676,3 +676,21 @@ The Danger Zone should look like a deliberate account-security section rather th
 
 ### Proof requirements
 Frontend typecheck/build and the relevant E2E suite must pass. Manual authenticated verification should confirm the modal opens, dismissal clears the password, empty confirmation cannot submit, successful deletion follows the existing logout/redirect path, and an invalid password does not delete the account.
+
+
+## 2026-09-26 — Knowledge embedding model and Agent collection presentation
+
+### Knowledge embedding failure
+- **Original behavior:** `backend/src/services/gemini.service.ts` hard-coded `text-embedding-004` while the database contract remained `vector(768)`.
+- **Observed production failure:** knowledge upload reached the backend and failed during embedding with Gemini HTTP 404 for `text-embedding-004`; this was not a CSV parsing failure and did not indicate a missing Gemini API key.
+- **Remediation intent:** keep the existing per-user Gemini key flow and 768-dimensional pgvector contract, but call a currently supported embedding model directly without introducing a new user/admin configuration surface.
+- **Change:** embedding generation now calls the supported `gemini-embedding-001` endpoint with `output_dimensionality: 768`, then validates the returned vector is exactly 768 dimensions. Chat-generation model configuration remains unchanged.
+- **Preserved behavior:** document text is still chunked exactly as before; embedding concurrency is unchanged; vectors remain `vector(768)`; RAG still uses cosine similarity; no embedding values are silently padded/truncated.
+- **Verification added:** `backend/tests/gemini-embedding.test.ts` verifies the model endpoint, API-key header, 768-dimensional request, exact returned dimension, and API/dimension failures.
+- **Compatibility note:** Gemini embedding spaces are model-specific. Any pre-existing vectors produced by the retired `text-embedding-004` model are not interchangeable with the new model's vectors and require re-embedding before their semantic retrieval can be considered valid. No existing knowledge rows are deleted automatically by this remediation.
+
+### Agent collection UI
+- **Original behavior:** the dashboard rendered all agents as fixed cards only, with four action controls crowded into each card footer.
+- **Remediation intent:** preserve create/edit/chat/data/delete functionality while making the collection scalable when many agents exist.
+- **Change:** added a persisted Grid/List view toggle. Grid retains the card presentation; List presents each agent as a compact row with name/temperature, prompt preview, document/chunk stats, and actions aligned into distinct columns. Mobile collapses list rows into a readable single-column arrangement.
+- **Preserved behavior:** existing agent actions and routes remain unchanged; the view preference is presentation-only and stored locally in the browser.
