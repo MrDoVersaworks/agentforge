@@ -768,48 +768,74 @@ body {
   position: relative;
   z-index: 10;
   border-top: 1px solid var(--glass-border);
-  padding: 40px 24px;
+  padding: 52px 24px 28px;
   background: var(--bg-secondary);
 }
 .site-footer-inner {
   max-width: 1200px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 20px 32px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 34px 48px;
+  align-items: start;
 }
 .site-footer-brand {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  align-items: flex-start;
+  gap: 7px;
+  max-width: 520px;
   color: var(--text-tertiary);
   font-size: 0.82rem;
 }
+.site-footer-kicker {
+  color: var(--accent-violet);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
 .site-footer-name {
   color: var(--text-primary);
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 1.05rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+.site-footer-description {
+  max-width: 480px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+.site-footer-tech {
+  margin-top: 3px;
+  color: var(--text-tertiary);
+  font-size: 0.74rem;
 }
 .site-footer-contact {
   color: var(--text-primary);
   background: var(--bg-tertiary);
   border: 1px solid var(--glass-border);
-  padding: 9px 14px;
+  padding: 10px 15px;
   border-radius: 10px;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 650;
+  text-decoration: none;
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+.site-footer-contact:hover {
+  border-color: var(--glass-border-hover);
+  background: var(--bg-elevated);
 }
 .site-footer-meta {
   grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: 12px 16px;
   align-items: center;
-  padding-top: 18px;
+  padding-top: 20px;
   border-top: 1px solid var(--glass-border);
   color: var(--text-tertiary);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
 }
 .site-footer-meta a:hover,
 .site-footer-contact:hover {
