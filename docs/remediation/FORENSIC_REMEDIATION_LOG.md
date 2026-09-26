@@ -606,3 +606,4 @@ Settings should stay focused on product configuration and account security. Redu
 
 ### Proof requirement
 GitHub CI must pass frontend typecheck/build and public E2E after these changes. The settings page must render only the remaining configuration and account-security sections; the public footer must retain Contact (when configured), Terms, and Privacy navigation.
+
