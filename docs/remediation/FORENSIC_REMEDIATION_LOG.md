@@ -511,3 +511,42 @@ The earlier main push probe did successfully trigger a Vercel backend production
 
 ### Superseding stale log entries
 Earlier entries in this document described the remediation as branch-only and described a frontend-owned production migration gate. Those statements reflect earlier intermediate states and are superseded by this section: PR #4 is merged into main, the frontend no longer owns production database migrations, and the backend deployment is the authoritative production migration path.
+
+## 2026-09-26 — production auth cookie boundary and PostgreSQL SSL warning remediation
+
+### Original observed behavior
+Production registration returned 201 and login returned 200, but the browser immediately followed with /auth/refresh returning 401. Runtime evidence showed the backend was reachable and credential verification succeeded; the persistent refresh-session path was failing. The frontend and backend were deployed as separate Vercel origins, while refresh authentication depended on a backend-origin httpOnly cookie.
+
+The backend also emitted a PostgreSQL client warning on production requests: pg treated legacy sslmode values such as require/prefer/verify-ca as aliases for verify-full and warned about the upcoming pg v9 semantic change.
+
+### Intended remediation behavior
+- Browser API traffic must remain same-origin so refresh/CSRF cookies are first-party to the application origin.
+- Existing backend routes, authentication semantics, refresh-token rotation, and CSRF checks must remain intact.
+- PostgreSQL TLS behavior must remain encrypted and explicit while eliminating the legacy connection-string warning.
+
+### Changes made
+PR #5, merged as aafabcbf28b8e148911119209980aee340abac05:
+- Browser-side Axios now targets same-origin /api.
+- Next.js rewrites /api/* to the configured backend origin.
+- The backend migration client normalizes legacy sslmode/ssl parameters before constructing the pg client.
+
+Production deployments for PR #5 reached READY on both frontend and backend.
+
+Production runtime evidence after PR #5 showed the PostgreSQL warning still appearing because the application runtime Drizzle pool, separate from the migration client, still passed the legacy connection-string parameters.
+
+PR #6, merged as 04946d900a9f87d6deb4bf65ca8bbb8a285fb461:
+- The runtime PostgreSQL pool now applies the same explicit SSL normalization.
+
+### Positive proof
+- GitHub CI for PR #5 passed backend type check, production build, fresh PostgreSQL+pgvector migration smoke test, contract tests, frontend type check, frontend production build, and public Playwright E2E.
+- GitHub CI for PR #6 passed the same backend and frontend gates, including public E2E.
+- Current frontend production deployment for commit 04946d900a9f87d6deb4bf65ca8bbb8a285fb461 reached READY.
+- Current backend production deployment for the same commit reached READY.
+- The current production backend logs queried after deployment show no new PostgreSQL SSL warning from the current deployment; the warning visible in the queried window belongs to the previous deployment dpl_FhjzdKqWQE98idU7kxoohkqNgFRh. This is evidence that the runtime warning remediation is active, but not a substitute for a longer observation window.
+- The current frontend production HTML is served successfully (HTTP 200) from the deployment for the merged commit.
+
+### What remains for direct user verification
+The assistant cannot perform a real browser login with the user's credentials from the available Vercel connector. The production architecture is now arranged so the browser calls same-origin /api and Next.js forwards those requests to the backend. The user should now test registration/login in the production UI; the critical expected sequence is register/login 2xx, refresh 2xx, and no redirect back to /login.
+
+### Migration proof status
+Production migration execution remains UNVERIFIED at the build-log level because the available Vercel build-log connector is unavailable. CI migration smoke testing and READY deployments prove build/test health, not that production migration SQL was executed. Do not mark this subfinding closed until production build-log evidence or equivalent direct production schema evidence is obtained.
