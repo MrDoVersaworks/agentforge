@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import api, { setAccessToken, setCsrfToken, getAccessToken } from '@/lib/api';
 import type { User } from '@/types';
 
@@ -32,12 +32,17 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Monotonic auth operation ID prevents a stale bootstrap refresh from
+  // clearing or overwriting state established by a newer login/register.
+  const authOperationRef = useRef(0);
 
-  const refreshUser = useCallback(async () => {
+  const refreshUser = useCallback(async (operationId?: number) => {
     try {
       const { data } = await api.get('/auth/profile');
+      if (operationId !== undefined && operationId !== authOperationRef.current) return;
       setUser(mapAuthUser(data.data));
     } catch {
+      if (operationId !== undefined && operationId !== authOperationRef.current) return;
       setUser(null);
       setAccessToken(null);
     }
@@ -45,12 +50,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const bootstrapAuth = async () => {
+      const operationId = authOperationRef.current;
       try {
         const { data } = await api.post('/auth/refresh');
+        if (operationId !== authOperationRef.current) return;
         setCsrfToken(data.data.csrfToken ?? null);
         setAccessToken(data.data.accessToken);
-        await refreshUser();
+        await refreshUser(operationId);
       } catch {
+        if (operationId !== authOperationRef.current) return;
         setUser(null);
         setAccessToken(null);
         setCsrfToken(null);
@@ -62,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshUser]);
 
   const login = useCallback(async (email: string, password: string) => {
+    authOperationRef.current += 1;
     const { data } = await api.post('/auth/login', { email, password });
     setCsrfToken(data.data.csrfToken ?? null);
     setAccessToken(data.data.accessToken);
@@ -69,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(async (email: string, password: string, name: string) => {
+    authOperationRef.current += 1;
     const { data } = await api.post('/auth/register', { email, password, name });
     setCsrfToken(data.data.csrfToken ?? null);
     setAccessToken(data.data.accessToken);
@@ -76,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    authOperationRef.current += 1;
     try { await api.post('/auth/logout'); } catch {}
     setAccessToken(null);
     setCsrfToken(null);
