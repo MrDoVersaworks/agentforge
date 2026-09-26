@@ -184,6 +184,8 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+      </div>
+
       {showDeleteAccount && (
         <div className="delete-modal-backdrop" role="presentation" onClick={() => { if (!deletingAccount) { setShowDeleteAccount(false); setDeletePassword(''); } }}>
           <section className="delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-account-title" aria-describedby="delete-account-description" onClick={(event) => event.stopPropagation()}>
