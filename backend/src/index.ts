@@ -25,43 +25,29 @@ if (config.CORS_ORIGIN.includes(',')) {
   corsOrigin = config.CORS_ORIGIN.trim().replace(/\/+$/, '');
 }
 
-// ============================================================
-// SECURITY & CORS
-// ============================================================
+app.set('trust proxy', 1);
+
 app.use((helmet as any)({
   contentSecurityPolicy: false,
   frameguard: { action: 'deny' },
   hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
 }));
-app.use(
-  cors({
-    origin: corsOrigin,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+app.use(cors({
+  origin: corsOrigin,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+}));
 
-// ============================================================
-// PARSING
-// ============================================================
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-
-// Apply global rate limiting to all /api/ requests
 app.use('/api', apiRateLimiter);
 
-// ============================================================
-// HEALTH CHECK
-// ============================================================
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', service: 'agentforge-backend' });
 });
 
-// ============================================================
-// API ROUTES
-// ============================================================
 app.use('/api/auth', authRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/knowledge', knowledgeRoutes);
@@ -71,24 +57,12 @@ app.use('/api/public', publicRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/contact', contactRoutes);
 
-// ============================================================
-// 404 HANDLER
-// ============================================================
 app.use((_req, res) => {
-  res.status(404).json({
-    success: false,
-    message: '[ERR_ROUTE_NOT_FOUND] The requested API endpoint does not exist.',
-  });
+  res.status(404).json({ success: false, message: '[ERR_ROUTE_NOT_FOUND] The requested API endpoint does not exist.' });
 });
 
-// ============================================================
-// GLOBAL ERROR HANDLER
-// ============================================================
 app.use(errorHandler);
 
-// ============================================================
-// START SERVER
-// ============================================================
 app.listen(config.PORT, () => {
   logger.info('SERVER', 'AgentForge Backend API running on port ' + config.PORT);
   logger.info('SERVER', 'Mode: ' + config.NODE_ENV);
