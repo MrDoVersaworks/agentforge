@@ -450,6 +450,8 @@ export default function SettingsPage() {
 
         /* ── Danger Card ── */
         .danger-card {
+          box-sizing: border-box;
+          width: 100%;
           position: relative;
           padding: 32px;
           overflow: hidden;
