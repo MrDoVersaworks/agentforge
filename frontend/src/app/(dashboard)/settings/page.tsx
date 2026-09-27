@@ -454,18 +454,9 @@ export default function SettingsPage() {
           width: 100%;
           position: relative;
           padding: 32px;
-          overflow: hidden;
           border: 1px solid rgba(255, 69, 58, 0.18);
           background: linear-gradient(180deg, rgba(255, 69, 58, 0.035), rgba(255,255,255,0.012));
           box-shadow: none;
-        }
-        .danger-card::before {
-          content: "";
-          position: absolute;
-          inset: 0 auto 0 0;
-          width: 3px;
-          background: var(--accent-rose);
-          opacity: 0.85;
         }
         .danger-card:hover {
           border-color: rgba(251, 113, 133, 0.24);
