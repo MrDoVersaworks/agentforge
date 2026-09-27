@@ -231,5 +231,4 @@ export async function deleteDocument(
     throw new AppError('[ERR_DOCUMENT_NOT_FOUND] Document not found or unauthorized.', 404);
   }
 
-  invalidateCache('/api/agents', userId);
 }
