@@ -729,3 +729,31 @@ The screenshot also confirms that the account-deletion area is the Settings surf
 - Existing public E2E must remain green.
 - The final merged commit must deploy to the frontend production target.
 - Manual authenticated verification should confirm: Danger Zone is compact on mobile, delete dialog opens, cancel clears the password field, empty password cannot submit, valid deletion follows the existing account-deletion path, and an invalid password does not delete the account.
+
+
+## 2026-09-27 — production URL/visual verification discrepancy and Danger Zone polish
+
+### Evidence
+- The user's current mobile screenshot shows the older, visually heavy Danger Zone treatment: oversized “ACCOUNT SECURITY”/“Danger Zone” typography, a long unstructured deletion paragraph, and a large destructive button block.
+- The screenshot URL is `forge-drab.vercel.app`.
+- Vercel's current AgentForge production deployment is `dpl_9CPeVcSnFYjqpQ7CKpZJo8VxqfFk`, READY, built from main commit `5d9b09a3700748142caaa81664ba8dec8c01e2e7`, with production aliases including `agentforge-drab.vercel.app`.
+- The current `main` source already contains the earlier Danger Zone refinement, so the screenshot is not evidence that the current source was absent; it is evidence that the URL being viewed does not match the current production alias returned by Vercel.
+- The screenshot also shows the older Gemini-key status placement, which further supports that the viewed page is from an older/stale deployment rather than the current Settings source.
+
+### Intended remediation behavior
+- Do not rely on a deployment merely being READY; the visible production surface must correspond to the current source and remain visually coherent at mobile widths.
+- Keep account deletion discoverable and destructive, but make the Danger Zone compact, structured, and secondary to the primary settings task.
+- Preserve the password-confirmation modal and all deletion behavior.
+
+### Additional change
+- Reduced Danger Zone card/header/copy spacing and typography.
+- Collapsed the consequence text into a compact supporting line instead of a separate visual block.
+- Kept a clear divider before the destructive action.
+- On narrow screens, the delete trigger remains full-width for touch usability without expanding the surrounding card unnecessarily.
+- No account-deletion logic, API endpoint, payload, auth, authorization, or redirect behavior changed.
+
+### Proof requirements
+- Frontend typecheck/build and existing E2E must pass.
+- The branch must merge to `main` and the resulting frontend production deployment must be READY.
+- Production should be checked against the current Vercel production alias, not an older deployment URL.
+- Manual authenticated verification should confirm the delete dialog still opens, cancel clears password state, empty password cannot submit, and invalid credentials do not delete the account.
