@@ -41,7 +41,6 @@ router.get(
 router.get(
   '/:id',
   validate(uuidParamsSchema, 'params'),
-  cacheMiddleware(AGENT_CACHE_TTL_SECONDS),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const agent = await getAgentById(requireUserId(req), req.params.id);
     if (agent === null) {
@@ -74,7 +73,6 @@ router.delete(
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const userId = requireUserId(req);
     await deleteAgent(userId, req.params.id);
-    invalidateCache('/api/agents', userId);
     res.status(200).json({ success: true, data: null });
   })
 );
