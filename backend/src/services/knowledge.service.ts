@@ -14,7 +14,6 @@ import {
 } from '../db/schema.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
-import { invalidateCache } from '../utils/cache.js';
 import { decrypt } from './crypto.service.js';
 import { generateEmbedding } from './gemini.service.js';
 
@@ -186,7 +185,6 @@ export async function addDocument(
   const embeddings = await generateEmbeddings(geminiKey, textChunks);
   logger.info('KNOWLEDGE', 'Document embeddings generated.', { chunkCount: embeddings.length, dimension: 768 });
   const document = await persistDocument(agentId, input, embeddings);
-  invalidateCache('/api/agents', userId);
 
   logger.info('KNOWLEDGE', 'Successfully integrated document: ' + input.filename, {
     documentId: document.id,
@@ -233,5 +231,4 @@ export async function deleteDocument(
     throw new AppError('[ERR_DOCUMENT_NOT_FOUND] Document not found or unauthorized.', 404);
   }
 
-  invalidateCache('/api/agents', userId);
 }
