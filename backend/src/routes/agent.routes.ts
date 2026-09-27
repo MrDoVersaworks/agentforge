@@ -32,7 +32,6 @@ router.post(
 
 router.get(
   '/',
-  cacheMiddleware(AGENT_CACHE_TTL_SECONDS),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const agents = await getAgents(requireUserId(req));
     res.status(200).json({ success: true, data: { agents } });
@@ -65,7 +64,6 @@ router.patch(
       temperature?: number;
     };
     const agent = await updateAgent(userId, req.params.id, body);
-    invalidateCache('/api/agents', userId);
     res.status(200).json({ success: true, data: { agent } });
   })
 );
