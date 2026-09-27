@@ -757,3 +757,41 @@ The screenshot also confirms that the account-deletion area is the Settings surf
 - The branch must merge to `main` and the resulting frontend production deployment must be READY.
 - Production should be checked against the current Vercel production alias, not an older deployment URL.
 - Manual authenticated verification should confirm the delete dialog still opens, cancel clears password state, empty password cannot submit, and invalid credentials do not delete the account.
+
+
+## 2026-09-27 — knowledge observability, vector-count truth, and grounded-chat detection
+
+### Original behavior
+- Production info/warning logs were discarded because the logger returned immediately outside development mode. This prevented Vercel runtime logs from showing the knowledge upload/chunk/embedding lifecycle.
+- Knowledge-document responses omitted `chunk_count`; the frontend defaulted the missing field to `0`, masking an API contract defect as a real zero-vector state.
+- Agent list/detail responses returned raw agent rows without `document_count` or `chunk_count`, even though the frontend and chat UI depend on those fields. The frontend again defaulted missing counts to `0`.
+- The chat page decides whether “Grounded mode” is active from `agent.documentCount`. Therefore an agent with real knowledge documents could display “Grounded mode inactive” simply because the count was omitted.
+- Agent GET responses are cached, while knowledge upload/delete did not invalidate the agent cache, so knowledge state could remain stale until cache expiry.
+
+### Intended remediation behavior
+- Retain normal application info/warning logs in production as well as development so operational investigation can reconstruct the knowledge pipeline.
+- Never silently convert a missing document/vector count into a valid-looking zero. The API supplies authoritative counts and the frontend consumes them as required fields.
+- Agent list/detail responses expose actual document and chunk counts derived from `knowledge_documents` and `knowledge_chunks`.
+- Knowledge upload responses expose the actual number of embedded chunks, and upload/delete invalidate the agent cache so chat sees current knowledge state.
+- Grounded-mode presentation therefore reflects actual indexed knowledge presence; the RAG retrieval algorithm itself remains unchanged.
+
+### Behavior that must remain
+- Gemini embedding generation remains per-user-key based and uses the 768-dimensional pgvector contract.
+- Knowledge chunking, embedding concurrency, vector storage, cosine-similarity retrieval, chat generation, and auth semantics remain unchanged.
+- Missing knowledge still legitimately produces grounded mode inactive; only the false-zero detection path is remediated.
+- No API keys or document contents are written to logs.
+
+### Changes
+- Logger info/warn output is now retained in production.
+- Knowledge upload logs record safe lifecycle metadata: filename, content length, chunk count, embedding count/dimension, document ID, and completion state; no key or document body is logged.
+- Knowledge document list responses include authoritative `chunk_count` from `knowledge_chunks`.
+- Agent list/detail responses include authoritative `document_count` and `chunk_count` using correlated database counts.
+- Knowledge upload returns `chunk_count` and invalidates the authenticated user’s `/api/agents` cache; deletion invalidates the same cache.
+- Frontend knowledge/agent mappers now require the API count fields instead of defaulting missing fields to zero.
+
+### Proof requirements
+1. Backend tests must pass, including the Gemini embedding contract tests.
+2. Backend build and frontend production build/typecheck must pass.
+3. The knowledge upload path must be verified as: upload request → chunking → Gemini embeddings → transactional document/chunk persistence → authoritative counts → agent cache invalidation → chat grounded-state detection.
+4. Runtime logs must show the knowledge lifecycle in production while omitting secrets/content.
+5. Existing chat/RAG retrieval and knowledge deletion behavior must remain functional.
