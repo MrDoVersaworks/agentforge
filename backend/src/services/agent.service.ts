@@ -27,7 +27,11 @@ export async function createAgent(userId: string, input: CreateAgentInput) {
     throw new Error('[ERR_AGENT_CREATE_FAILED] Failed to create agent.');
   }
 
-  return result[0];
+  const agent = await getAgentById(userId, result[0].id);
+  if (agent === null) {
+    throw new Error('[ERR_AGENT_CREATE_FAILED] Failed to load created agent.');
+  }
+  return agent;
 }
 
 export async function getAgents(userId: string) {
@@ -97,7 +101,11 @@ export async function updateAgent(
     throw new AppError('[ERR_AGENT_NOT_FOUND] Agent not found or unauthorized.', 404);
   }
 
-  return result[0];
+  const agent = await getAgentById(userId, agentId);
+  if (agent === null) {
+    throw new AppError('[ERR_AGENT_NOT_FOUND] Agent not found or unauthorized.', 404);
+  }
+  return agent;
 }
 
 export async function deleteAgent(userId: string, agentId: string): Promise<void> {
