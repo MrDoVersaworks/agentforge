@@ -496,7 +496,6 @@ export default function SettingsPage() {
         }
         .danger-copy {
           margin-top: 20px;
-          padding-left: 0;
         }
         .danger-copy h4 {
           font-size: 0.92rem;
@@ -505,25 +504,28 @@ export default function SettingsPage() {
           margin-bottom: 4px;
         }
         .danger-copy p {
-          max-width: 700px;
+          max-width: 100%;
           color: var(--text-secondary);
           font-size: 0.8rem;
           line-height: 1.5;
         }
         .danger-action-row {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) auto;
-          align-items: center;
-          gap: 24px;
-          margin-top: 22px;
-          padding: 18px 0 0;
+          grid-template-columns: minmax(0, 1fr) minmax(158px, auto);
+          align-items: stretch;
+          gap: 18px;
+          margin-top: 20px;
+          padding-top: 18px;
           border-top: 1px solid var(--glass-border);
         }
         .danger-action {
           min-width: 0;
+          max-width: 100%;
         }
         .danger-consequence {
+          box-sizing: border-box;
           min-width: 0;
+          max-width: 100%;
           padding: 11px 13px;
           border: 1px solid rgba(255, 69, 58, 0.12);
           border-radius: 10px;
@@ -535,6 +537,7 @@ export default function SettingsPage() {
         .danger-consequence-copy {
           display: block;
           min-width: 0;
+          overflow-wrap: anywhere;
         }
         .danger-consequence-label {
           color: var(--text-primary);
@@ -549,8 +552,10 @@ export default function SettingsPage() {
           display: none;
         }
         .danger-trigger {
+          box-sizing: border-box;
+          width: 100%;
           min-width: 158px;
-          min-height: 42px;
+          min-height: 44px;
           justify-content: center;
           gap: 7px;
           padding: 0 12px;
