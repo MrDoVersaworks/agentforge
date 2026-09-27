@@ -795,3 +795,50 @@ The screenshot also confirms that the account-deletion area is the Settings surf
 3. The knowledge upload path must be verified as: upload request → chunking → Gemini embeddings → transactional document/chunk persistence → authoritative counts → agent cache invalidation → chat grounded-state detection.
 4. Runtime logs must show the knowledge lifecycle in production while omitting secrets/content.
 5. Existing chat/RAG retrieval and knowledge deletion behavior must remain functional.
+
+
+## 2026-09-27 — Authoritative knowledge counts across Vercel instances and Danger Zone layout reconstruction
+
+### Original behavior
+- Agent list/detail GET endpoints used an in-process `NodeCache` with a TTL.
+- Knowledge upload/delete attempted to invalidate that cache after database mutation.
+- The cache lived inside the Node.js process, so invalidation only affected the specific serverless instance handling the mutation.
+- On a multi-instance/serverless deployment, a later agent GET could be served by another warm instance containing an older `document_count`/`chunk_count` response.
+- The frontend dashboard and chat both trusted the agent GET counts, so stale zeroes could make the dashboard show `0 documents / 0 chunks` and the chat show the grounded-mode-inactive state even though the knowledge page showed persisted vectors.
+- The Danger Zone had been repeatedly adjusted through spacing-only CSS changes. The card also used `overflow: hidden` plus a decorative pseudo-element and a two-column action row, which made responsive clipping possible and made visual changes difficult to reason about from source alone.
+
+### Intended remediation
+- Agent list/detail responses must read authoritative counts from PostgreSQL on every request rather than depend on process-local cache state.
+- Preserve the existing database count queries, authentication, agent CRUD semantics, knowledge persistence, RAG behavior, and deletion flow.
+- Reconstruct the Danger Zone as a bounded, width-safe component: no clipping container, explicit `box-sizing`, width constraints, safe text wrapping, a stable desktop action row, and a single-column mobile action layout.
+
+### Existing behavior that must remain
+- Agent CRUD endpoints remain authenticated and user-scoped.
+- Knowledge upload still chunks, embeds, persists the document/chunks, and reports the actual chunk count.
+- Knowledge deletion still removes the document and associated vectors through the existing database cascade/relationship.
+- Chat still uses the agent's authoritative document count to determine whether grounded presentation is active.
+- Account deletion still opens the existing confirmation dialog and calls the existing authenticated account-deletion endpoint with password confirmation.
+- No secrets, document contents, or passwords are introduced into logs or UI.
+
+### Changes
+- Removed the process-local cache middleware from `GET /api/agents` and `GET /api/agents/:id`.
+- Removed now-unnecessary knowledge/agent cache invalidation calls. The source of truth is the database query itself.
+- Kept the existing correlated PostgreSQL document/chunk count queries unchanged.
+- Rebuilt the Danger Zone CSS around width containment and responsive flow:
+  - `box-sizing: border-box` and `width: 100%` on the card.
+  - Removed `overflow: hidden` and the left-edge pseudo-element that could visually clip content.
+  - Removed arbitrary left padding from the copy.
+  - Made the action row width-safe with `minmax(0, 1fr)` and an explicit action column.
+  - Added `max-width: 100%` and safe text wrapping to consequence content.
+  - Made the destructive trigger explicitly width-safe.
+  - At narrow widths, the consequence and delete action stack in one column with a full-width button.
+
+### Proof contract
+1. Upload a document that produces three chunks.
+2. Verify the knowledge page reports one document and three vectors.
+3. Request `GET /api/agents` and `GET /api/agents/:id` after upload; both must report one document and three chunks regardless of which serverless instance handles the request.
+4. Return to the dashboard; the same agent card must show `1` document and `3` chunks.
+5. Open chat; the grounded-mode-inactive notice must not be rendered while the document exists.
+6. Delete the document; knowledge, agent list/detail, dashboard, and chat must return to the legitimate zero-knowledge state.
+7. Verify Danger Zone at desktop and narrow/mobile widths: all text remains inside the card border, the action row does not overlap or clip, and the delete trigger remains fully inside the card.
+8. Run backend tests, frontend typecheck/build, and the existing Playwright suite. A source diff alone is not considered visual proof.
