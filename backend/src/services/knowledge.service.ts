@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import {
   DEFAULT_CHUNK_OVERLAP,
   DEFAULT_CHUNK_SIZE,
@@ -14,6 +14,7 @@ import {
 } from '../db/schema.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
+import { invalidateCache } from '../utils/cache.js';
 import { decrypt } from './crypto.service.js';
 import { generateEmbedding } from './gemini.service.js';
 
@@ -174,15 +175,24 @@ export async function addDocument(
   agentId: string,
   input: AddDocumentInput
 ) {
-  logger.info('KNOWLEDGE', 'Uploading document for agent ' + agentId + ' by user ' + userId);
+  logger.info('KNOWLEDGE', 'Uploading document for agent ' + agentId + ' by user ' + userId, {
+    filename: input.filename,
+    contentLength: input.contentText.length,
+  });
   await requireOwnedAgent(userId, agentId);
   const geminiKey = await requireGeminiKey(userId);
   const textChunks = chunkText(input.contentText);
+  logger.info('KNOWLEDGE', 'Document chunked before embedding.', { chunkCount: textChunks.length });
   const embeddings = await generateEmbeddings(geminiKey, textChunks);
+  logger.info('KNOWLEDGE', 'Document embeddings generated.', { chunkCount: embeddings.length, dimension: 768 });
   const document = await persistDocument(agentId, input, embeddings);
+  invalidateCache('/api/agents', userId);
 
-  logger.info('KNOWLEDGE', 'Successfully integrated document: ' + input.filename);
-  return document;
+  logger.info('KNOWLEDGE', 'Successfully integrated document: ' + input.filename, {
+    documentId: document.id,
+    chunkCount: embeddings.length,
+  });
+  return { ...document, chunk_count: embeddings.length };
 }
 
 export async function getDocuments(userId: string, agentId: string) {
@@ -194,6 +204,7 @@ export async function getDocuments(userId: string, agentId: string) {
       id: knowledgeDocuments.id,
       filename: knowledgeDocuments.filename,
       created_at: knowledgeDocuments.created_at,
+      chunk_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_chunks kc WHERE kc.document_id = ${knowledgeDocuments.id})`,
     })
     .from(knowledgeDocuments)
     .where(eq(knowledgeDocuments.agent_id, agentId))
@@ -221,4 +232,6 @@ export async function deleteDocument(
   if (deleted.length === 0) {
     throw new AppError('[ERR_DOCUMENT_NOT_FOUND] Document not found or unauthorized.', 404);
   }
+
+  invalidateCache('/api/agents', userId);
 }
