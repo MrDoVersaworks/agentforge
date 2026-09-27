@@ -1,12 +1,10 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
-import { AGENT_CACHE_TTL_SECONDS } from '../config/constants.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { agentCreateSchema, agentUpdateSchema } from '../types/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { cacheMiddleware, invalidateCache } from '../utils/cache.js';
 import { requireUserId } from '../utils/requestIdentity.js';
 import {
   createAgent,
@@ -28,7 +26,6 @@ router.post(
     const userId = requireUserId(req);
     const body = req.body as { name: string; system_prompt: string; temperature: number };
     const agent = await createAgent(userId, body);
-    invalidateCache('/api/agents', userId);
     res.status(201).json({ success: true, data: { agent } });
   })
 );
