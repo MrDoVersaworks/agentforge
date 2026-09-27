@@ -785,7 +785,7 @@ The screenshot also confirms that the account-deletion area is the Settings surf
 - Logger info/warn output is now retained in production.
 - Knowledge upload logs record safe lifecycle metadata: filename, content length, chunk count, embedding count/dimension, document ID, and completion state; no key or document body is logged.
 - Knowledge document list responses include authoritative `chunk_count` from `knowledge_chunks`.
-- Agent list/detail responses include authoritative `document_count` and `chunk_count` using correlated database counts.
+- Agent list/detail and create/update responses include authoritative `document_count` and `chunk_count` using correlated database counts.
 - Knowledge upload returns `chunk_count` and invalidates the authenticated user’s `/api/agents` cache; deletion invalidates the same cache.
 - Frontend knowledge/agent mappers now require the API count fields instead of defaulting missing fields to zero.
 
