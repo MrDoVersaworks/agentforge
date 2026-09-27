@@ -1,4 +1,4 @@
-export type LogCategory = 'AUTH' | 'DATABASE' | 'SERVER' | 'AI' | 'KNOWLEDGE' | 'CHAT' | 'SETTINGS' | 'ERROR';
+export type LogCategory = 'AUTH' | 'DATABASE' | 'SERVER' | 'AI' | 'KNOWLEDGE' | 'CHAT' | 'SETTINGS' | 'ERROR' | 'TRACE';
 
 const colors = {
   reset: '\x1b[0m',
@@ -11,38 +11,29 @@ const colors = {
   magenta: '\x1b[35m',
 };
 
+function write(level: 'INFO' | 'WARN' | 'ERROR', category: LogCategory, message: string, data?: unknown) {
+  const payload = {
+    timestamp: new Date().toISOString(),
+    level,
+    category,
+    message,
+    ...(data === undefined ? {} : { data }),
+  };
+  const line = JSON.stringify(payload) + '\n';
+  if (level === 'ERROR') process.stderr.write(line);
+  else process.stdout.write(line);
+}
+
 export const logger = {
-  info: (category: LogCategory, message: string, data?: unknown) => {
-    const color = category === 'DATABASE' ? colors.green : category === 'AI' ? colors.magenta : colors.cyan;
-    process.stdout.write(
-      `${colors.dim}[${new Date().toISOString()}]${colors.reset} ` +
-      `${color}[${category}]${colors.reset} ` +
-      `${message}\n`
-    );
-    if (data) {
-      process.stdout.write(`${colors.dim}${JSON.stringify(data, null, 2)}${colors.reset}\n`);
-    }
-  },
 
-  warn: (category: LogCategory, message: string, data?: unknown) => {
-    process.stdout.write(
-      `${colors.dim}[${new Date().toISOString()}]${colors.reset} ` +
-      `${colors.yellow}[${category}]${colors.reset} ` +
-      `${message}\n`
-    );
-    if (data) {
-      process.stdout.write(`${colors.dim}${JSON.stringify(data, null, 2)}${colors.reset}\n`);
-    }
-  },
+  info: (category: LogCategory, message: string, data?: unknown) => write('INFO', category, message, data),
 
-  error: (category: LogCategory, message: string, error?: unknown) => {
-    process.stderr.write(
-      `${colors.dim}[${new Date().toISOString()}]${colors.reset} ` +
-      `${colors.red}[${category}]${colors.reset} ` +
-      `${colors.red}${message}${colors.reset}\n`
-    );
-    if (error) {
-      process.stderr.write(`${colors.red}${error instanceof Error ? error.stack : JSON.stringify(error, null, 2)}${colors.reset}\n`);
-    }
-  },
-};
+  warn: (category: LogCategory, message: string, data?: unknown) => write('WARN', category, message, data),
+
+  error: (category: LogCategory, message: string, error?: unknown) => write(
+    'ERROR',
+    category,
+    message,
+    error instanceof Error ? { error: error.message, stack: error.stack } : error
+  ),
+
