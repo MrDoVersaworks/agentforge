@@ -41,7 +41,7 @@ export function useAgents() {
       const records = data.data?.agents ?? [];
       console.info('[AgentForge][TRACE] agents:map', records.map((record: AgentApiRecord) => ({ agentId: record.id, documentCount: record.document_count, chunkCount: record.chunk_count })));
       const mapped = records.map(mapAgent);
-      console.info('[AgentForge][TRACE] agents:state-update', mapped.map((agent) => ({ agentId: agent.id, documentCount: agent.documentCount, chunkCount: agent.chunkCount })));
+      console.info('[AgentForge][TRACE] agents:state-update', mapped.map((agent: Agent) => ({ agentId: agent.id, documentCount: agent.documentCount, chunkCount: agent.chunkCount })));
       setAgents(mapped);
     } catch (error) {
       console.error('[AgentForge][TRACE] agents:fetch-failed', error);
