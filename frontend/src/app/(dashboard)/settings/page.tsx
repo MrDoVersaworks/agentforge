@@ -581,7 +581,7 @@ export default function SettingsPage() {
 
         @media (max-width: 560px) {
           .danger-card {
-            padding: 24px;
+            padding: 22px;
           }
           .danger-heading {
             gap: 10px;
@@ -596,7 +596,6 @@ export default function SettingsPage() {
           }
           .danger-copy {
             margin-top: 16px;
-            padding-left: 0;
           }
           .danger-copy h4 {
             font-size: 0.86rem;
@@ -609,14 +608,15 @@ export default function SettingsPage() {
             grid-template-columns: 1fr;
             gap: 12px;
             margin-top: 18px;
-            padding: 16px 0 0;
+            padding-top: 16px;
           }
           .danger-consequence {
             font-size: 0.7rem;
           }
           .danger-trigger {
             width: 100%;
-            min-height: 42px;
+            min-width: 0;
+            min-height: 44px;
           }
         }
 
