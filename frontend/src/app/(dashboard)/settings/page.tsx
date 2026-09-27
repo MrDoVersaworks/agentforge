@@ -451,7 +451,7 @@ export default function SettingsPage() {
         /* ── Danger Card ── */
         .danger-card {
           position: relative;
-          padding: 24px;
+          padding: 32px;
           overflow: hidden;
           border: 1px solid rgba(255, 69, 58, 0.18);
           background: linear-gradient(180deg, rgba(255, 69, 58, 0.035), rgba(255,255,255,0.012));
@@ -502,8 +502,8 @@ export default function SettingsPage() {
           color: var(--text-primary);
         }
         .danger-copy {
-          margin-top: 16px;
-          padding-left: 52px;
+          margin-top: 20px;
+          padding-left: 0;
         }
         .danger-copy h4 {
           font-size: 0.92rem;
@@ -521,9 +521,9 @@ export default function SettingsPage() {
           display: grid;
           grid-template-columns: minmax(0, 1fr) auto;
           align-items: center;
-          gap: 20px;
-          margin-top: 18px;
-          padding: 16px 0 0 52px;
+          gap: 24px;
+          margin-top: 22px;
+          padding: 18px 0 0;
           border-top: 1px solid var(--glass-border);
         }
         .danger-action {
@@ -583,7 +583,7 @@ export default function SettingsPage() {
 
         @media (max-width: 560px) {
           .danger-card {
-            padding: 18px;
+            padding: 24px;
           }
           .danger-heading {
             gap: 10px;
@@ -597,8 +597,8 @@ export default function SettingsPage() {
             font-size: 0.98rem;
           }
           .danger-copy {
-            margin-top: 14px;
-            padding-left: 46px;
+            margin-top: 16px;
+            padding-left: 0;
           }
           .danger-copy h4 {
             font-size: 0.86rem;
@@ -609,9 +609,9 @@ export default function SettingsPage() {
           }
           .danger-action-row {
             grid-template-columns: 1fr;
-            gap: 10px;
-            margin-top: 14px;
-            padding: 13px 0 0 46px;
+            gap: 12px;
+            margin-top: 18px;
+            padding: 16px 0 0;
           }
           .danger-consequence {
             font-size: 0.7rem;
