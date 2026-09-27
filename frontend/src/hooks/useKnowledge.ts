@@ -8,7 +8,7 @@ interface KnowledgeDocumentApiRecord {
   id: string;
   agent_id: string;
   filename: string;
-  chunk_count?: number;
+  chunk_count: number;
   created_at: string;
 }
 
@@ -17,7 +17,7 @@ function mapDocument(record: KnowledgeDocumentApiRecord): KnowledgeDocument {
     id: record.id,
     agentId: record.agent_id,
     filename: record.filename,
-    chunkCount: record.chunk_count ?? 0,
+    chunkCount: record.chunk_count,
     createdAt: record.created_at,
   };
 }

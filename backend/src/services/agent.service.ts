@@ -27,13 +27,27 @@ export async function createAgent(userId: string, input: CreateAgentInput) {
     throw new Error('[ERR_AGENT_CREATE_FAILED] Failed to create agent.');
   }
 
-  return result[0];
+  const agent = await getAgentById(userId, result[0].id);
+  if (agent === null) {
+    throw new Error('[ERR_AGENT_CREATE_FAILED] Failed to load created agent.');
+  }
+  return agent;
 }
 
 export async function getAgents(userId: string) {
   logger.info('DATABASE', 'Retrieving agents for user: ' + userId);
   return db
-    .select()
+    .select({
+      id: agents.id,
+      user_id: agents.user_id,
+      name: agents.name,
+      system_prompt: agents.system_prompt,
+      temperature: agents.temperature,
+      document_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_documents kd WHERE kd.agent_id = ${agents.id})`,
+      chunk_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_chunks kc WHERE kc.agent_id = ${agents.id})`,
+      created_at: agents.created_at,
+      updated_at: agents.updated_at,
+    })
     .from(agents)
     .where(eq(agents.user_id, userId))
     .orderBy(desc(agents.created_at))
@@ -43,7 +57,17 @@ export async function getAgents(userId: string) {
 export async function getAgentById(userId: string, agentId: string) {
   logger.info('DATABASE', 'Retrieving agent: ' + agentId + ' for user: ' + userId);
   const result = await db
-    .select()
+    .select({
+      id: agents.id,
+      user_id: agents.user_id,
+      name: agents.name,
+      system_prompt: agents.system_prompt,
+      temperature: agents.temperature,
+      document_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_documents kd WHERE kd.agent_id = ${agents.id})`,
+      chunk_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_chunks kc WHERE kc.agent_id = ${agents.id})`,
+      created_at: agents.created_at,
+      updated_at: agents.updated_at,
+    })
     .from(agents)
     .where(and(eq(agents.id, agentId), eq(agents.user_id, userId)))
     .limit(1);
@@ -77,7 +101,11 @@ export async function updateAgent(
     throw new AppError('[ERR_AGENT_NOT_FOUND] Agent not found or unauthorized.', 404);
   }
 
-  return result[0];
+  const agent = await getAgentById(userId, agentId);
+  if (agent === null) {
+    throw new AppError('[ERR_AGENT_NOT_FOUND] Agent not found or unauthorized.', 404);
+  }
+  return agent;
 }
 
 export async function deleteAgent(userId: string, agentId: string): Promise<void> {
