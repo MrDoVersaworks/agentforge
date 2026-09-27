@@ -6,6 +6,7 @@ import { validate } from '../middleware/validate.js';
 import { knowledgeDocumentSchema } from '../types/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireUserId } from '../utils/requestIdentity.js';
+import { logger } from '../utils/logger.js';
 import {
   addDocument,
   deleteDocument,
@@ -33,6 +34,7 @@ router.post(
       contentText: body.content_text,
     });
     res.status(201).json({ success: true, data: { document } });
+    logger.info('TRACE', 'Knowledge upload response sent', { requestId: res.locals.requestId, agentId: req.params.agentId, documentId: document.id, chunkCount: document.chunk_count });
   })
 );
 
@@ -43,6 +45,7 @@ router.get(
     const userId = requireUserId(req);
     const documents = await getDocuments(userId, req.params.agentId);
     res.status(200).json({ success: true, data: { documents } });
+    logger.info('TRACE', 'Knowledge list response sent', { requestId: res.locals.requestId, agentId: req.params.agentId, documentCount: documents.length, chunkCount: documents.reduce((sum, document) => sum + document.chunk_count, 0) });
   })
 );
 

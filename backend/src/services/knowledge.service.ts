@@ -186,6 +186,23 @@ export async function addDocument(
   logger.info('KNOWLEDGE', 'Document embeddings generated.', { chunkCount: embeddings.length, dimension: 768 });
   const document = await persistDocument(agentId, input, embeddings);
 
+  const persistedCounts = await db
+    .select({
+      document_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_documents kd WHERE kd.agent_id = ${agents.id})`,
+      chunk_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_chunks kc WHERE kc.agent_id = ${agents.id})`,
+    })
+    .from(agents)
+    .where(and(eq(agents.id, agentId), eq(agents.user_id, userId)))
+    .limit(1);
+
+  logger.info('TRACE', 'Knowledge persistence verified after upload', {
+    userId,
+    agentId,
+    documentId: document.id,
+    documentCount: persistedCounts[0]?.document_count ?? null,
+    chunkCount: persistedCounts[0]?.chunk_count ?? null,
+  });
+
   logger.info('KNOWLEDGE', 'Successfully integrated document: ' + input.filename, {
     documentId: document.id,
     chunkCount: embeddings.length,
@@ -197,7 +214,7 @@ export async function getDocuments(userId: string, agentId: string) {
   logger.info('KNOWLEDGE', 'Listing documents for agent: ' + agentId);
   await requireOwnedAgent(userId, agentId);
 
-  return db
+  const documents = await db
     .select({
       id: knowledgeDocuments.id,
       filename: knowledgeDocuments.filename,
@@ -207,6 +224,19 @@ export async function getDocuments(userId: string, agentId: string) {
     .from(knowledgeDocuments)
     .where(eq(knowledgeDocuments.agent_id, agentId))
     .limit(KNOWLEDGE_DOCUMENT_QUERY_LIMIT);
+
+  logger.info('TRACE', 'Knowledge document query completed', {
+    userId,
+    agentId,
+    documentCount: documents.length,
+    documents: documents.map((document) => ({
+      documentId: document.id,
+      filename: document.filename,
+      chunkCount: document.chunk_count,
+    })),
+  });
+
+  return documents;
 }
 
 export async function deleteDocument(

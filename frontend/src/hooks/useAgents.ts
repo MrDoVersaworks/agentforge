@@ -38,8 +38,13 @@ export function useAgents() {
     setIsLoading(true);
     try {
       const { data } = await api.get('/agents');
-      setAgents((data.data?.agents ?? []).map(mapAgent));
-    } catch {
+      const records = data.data?.agents ?? [];
+      console.info('[AgentForge][TRACE] agents:map', records.map((record: AgentApiRecord) => ({ agentId: record.id, documentCount: record.document_count, chunkCount: record.chunk_count })));
+      const mapped = records.map(mapAgent);
+      console.info('[AgentForge][TRACE] agents:state-update', mapped.map((agent: Agent) => ({ agentId: agent.id, documentCount: agent.documentCount, chunkCount: agent.chunkCount })));
+      setAgents(mapped);
+    } catch (error) {
+      console.error('[AgentForge][TRACE] agents:fetch-failed', error);
       setAgents([]);
     } finally {
       setIsLoading(false);

@@ -14,6 +14,11 @@ export const API_BASE_URL = typeof window !== 'undefined' ? '/api' : (rawUrl.end
 
 const CSRF_STORAGE_KEY = 'agentforge_csrf_token';
 
+function createRequestId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return `af-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
@@ -38,6 +43,12 @@ function getCsrfToken(): string | null {
 }
 
 api.interceptors.request.use((config) => {
+  const requestId = createRequestId();
+  config.headers['X-Request-ID'] = requestId;
+  (config as typeof config & { __agentforgeRequestId?: string }).__agentforgeRequestId = requestId;
+  if (typeof window !== 'undefined') {
+    console.info('[AgentForge][TRACE] request:start', { requestId, method: config.method, url: config.url });
+  }
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
   if (typeof config.url === 'string' &&
       (config.url.includes('/auth/refresh') || config.url.includes('/auth/logout'))) {
@@ -59,8 +70,36 @@ function processQueue(error: unknown, token: string | null = null) {
 }
 
 api.interceptors.response.use(
-  response => response,
+  response => {
+    if (typeof window !== 'undefined') {
+      const requestId = (response.config as typeof response.config & { __agentforgeRequestId?: string }).__agentforgeRequestId;
+      const payload = response.data?.data;
+      console.info('[AgentForge][TRACE] request:complete', {
+        requestId,
+        method: response.config.method,
+        url: response.config.url,
+        status: response.status,
+        agentCounts: payload?.agents?.map?.((agent: { id?: string; document_count?: number; chunk_count?: number }) => ({
+          agentId: agent.id,
+          documentCount: agent.document_count,
+          chunkCount: agent.chunk_count,
+        })),
+        documentCount: Array.isArray(payload?.documents) ? payload.documents.length : undefined,
+      });
+    }
+    return response;
+  },
   async error => {
+    if (typeof window !== 'undefined') {
+      const requestId = (error.config as (typeof error.config & { __agentforgeRequestId?: string }) | undefined)?.__agentforgeRequestId;
+      console.error('[AgentForge][TRACE] request:error', {
+        requestId,
+        method: error.config?.method,
+        url: error.config?.url,
+        status: error.response?.status,
+        message: error.message,
+      });
+    }
     const originalRequest = error.config;
     if (
       error.response?.status === 401 &&

@@ -842,3 +842,42 @@ The screenshot also confirms that the account-deletion area is the Settings surf
 6. Delete the document; knowledge, agent list/detail, dashboard, and chat must return to the legitimate zero-knowledge state.
 7. Verify Danger Zone at desktop and narrow/mobile widths: all text remains inside the card border, the action row does not overlap or clip, and the delete trigger remains fully inside the card.
 8. Run backend tests, frontend typecheck/build, and the existing Playwright suite. A source diff alone is not considered visual proof.
+
+
+### 2026-09-27 — Production-safe end-to-end forensic tracing for knowledge/count persistence
+
+**Original behavior:** Knowledge uploads successfully created documents/chunks, but the production symptom could still not be localized from application behavior alone when the dashboard later displayed zero document/vector counts.
+
+**Diagnostic objective:** Establish an observable chain without changing business behavior:
+1. frontend request starts;
+2. backend receives the request with a correlation ID;
+3. authentication resolves the user;
+4. knowledge upload chunks/embeds/persists;
+5. database persistence is immediately re-read and counted;
+6. API response contains the authoritative counts;
+7. frontend receives the response;
+8. frontend maps API snake_case fields to client camelCase fields;
+9. frontend state is updated;
+10. subsequent agent-list/detail requests return the same authoritative counts.
+
+**Remediation:** Added structured production-safe tracing only. No knowledge, authentication, CRUD, RAG, deletion, or UI business behavior was intentionally changed.
+
+**Backend instrumentation:**
+- Every HTTP request receives or preserves an `X-Request-ID` correlation identifier and returns it in the response header.
+- Request start/completion events record method, route, status, and duration.
+- Knowledge upload logs persistence verification using database counts immediately after the transaction.
+- Knowledge listing logs returned document IDs, filenames, and per-document chunk counts.
+- Agent list/detail service queries log the authoritative `document_count` and `chunk_count` returned by PostgreSQL.
+- Agent/knowledge route handlers log the exact response payload counts being sent.
+- Structured JSON logging is used in production; no document contents, embeddings, API keys, access tokens, passwords, or secrets are logged.
+
+**Frontend instrumentation:**
+- Axios requests receive correlation IDs and log start/completion/error events.
+- Agent-list responses log raw API count fields before mapping and client-state values after mapping.
+- Knowledge-list responses log document and chunk totals.
+- Successful uploads log document ID and chunk count.
+- Errors are logged with status/message/request ID, without authorization headers or response bodies.
+
+**Proof contract:** After one upload and one navigation away/back cycle, the logs must let us determine whether the value becomes zero at persistence, database read, API response, frontend mapping, or frontend state/rendering. This is diagnostic instrumentation only and must be removed or reduced once the root cause is conclusively identified.
+
+**Existing behavior that must remain:** The authoritative PostgreSQL count queries remain the source of truth; no caching layer, endpoint contract, authentication behavior, knowledge persistence semantics, or destructive-action behavior is changed by this tracing work.

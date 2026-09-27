@@ -36,7 +36,7 @@ export async function createAgent(userId: string, input: CreateAgentInput) {
 
 export async function getAgents(userId: string) {
   logger.info('DATABASE', 'Retrieving agents for user: ' + userId);
-  return db
+  const result = await db
     .select({
       id: agents.id,
       user_id: agents.user_id,
@@ -52,6 +52,17 @@ export async function getAgents(userId: string) {
     .where(eq(agents.user_id, userId))
     .orderBy(desc(agents.created_at))
     .limit(AGENT_QUERY_LIMIT);
+
+  logger.info('TRACE', 'Agent list query completed', {
+    userId,
+    agentCount: result.length,
+    agents: result.map((agent) => ({
+      agentId: agent.id,
+      documentCount: agent.document_count,
+      chunkCount: agent.chunk_count,
+    })),
+  });
+  return result;
 }
 
 export async function getAgentById(userId: string, agentId: string) {
@@ -73,8 +84,16 @@ export async function getAgentById(userId: string, agentId: string) {
     .limit(1);
 
   if (result.length === 0) {
+    logger.warn('TRACE', 'Agent detail query returned no agent', { userId, agentId });
     return null;
   }
+
+  logger.info('TRACE', 'Agent detail query completed', {
+    userId,
+    agentId,
+    documentCount: result[0].document_count,
+    chunkCount: result[0].chunk_count,
+  });
 
   return result[0];
 }

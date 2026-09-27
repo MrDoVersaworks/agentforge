@@ -7,6 +7,7 @@ import { config } from './config/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { apiRateLimiter } from './middleware/rateLimiter.js';
 import { logger } from './utils/logger.js';
+import { randomUUID } from 'node:crypto';
 import authRoutes from './routes/auth.routes.js';
 import agentRoutes from './routes/agent.routes.js';
 import knowledgeRoutes from './routes/knowledge.routes.js';
@@ -27,6 +28,34 @@ if (config.CORS_ORIGIN.includes(',')) {
 
 app.set('trust proxy', 1);
 
+app.use((req, res, next) => {
+  const incomingRequestId = req.header('X-Request-ID');
+  const requestId = incomingRequestId && incomingRequestId.length <= 128
+    ? incomingRequestId
+    : randomUUID();
+  res.locals.requestId = requestId;
+  res.setHeader('X-Request-ID', requestId);
+  const startedAt = Date.now();
+
+  logger.info('TRACE', 'HTTP request started', {
+    requestId,
+    method: req.method,
+    path: req.path,
+  });
+
+  res.on('finish', () => {
+    logger.info('TRACE', 'HTTP request completed', {
+      requestId,
+      method: req.method,
+      path: req.path,
+      statusCode: res.statusCode,
+      durationMs: Date.now() - startedAt,
+    });
+  });
+
+  next();
+});
+
 app.use((helmet as any)({
   contentSecurityPolicy: false,
   frameguard: { action: 'deny' },
@@ -36,7 +65,8 @@ app.use(cors({
   origin: corsOrigin,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Request-ID'],
+  exposedHeaders: ['X-Request-ID'],
 }));
 
 app.use(express.json({ limit: '10mb' }));
