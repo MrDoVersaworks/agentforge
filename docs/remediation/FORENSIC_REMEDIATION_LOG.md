@@ -694,3 +694,38 @@ Frontend typecheck/build and the relevant E2E suite must pass. Manual authentica
 - **Remediation intent:** preserve create/edit/chat/data/delete functionality while making the collection scalable when many agents exist.
 - **Change:** added a persisted Grid/List view toggle. Grid retains the card presentation; List presents each agent as a compact row with name/temperature, prompt preview, document/chunk stats, and actions aligned into distinct columns. Mobile collapses list rows into a readable single-column arrangement.
 - **Preserved behavior:** existing agent actions and routes remain unchanged; the view preference is presentation-only and stored locally in the browser.
+
+## 2026-09-27 — Danger Zone mobile hierarchy follow-up
+
+### New production/UI evidence
+A current mobile screenshot of the deployed Settings page showed that the Danger Zone still reads as visually heavy: the security heading, deletion explanation, consequence text, and destructive button form one tall stacked block with weak hierarchy and excessive visual weight. This supersedes the earlier Danger Zone refinement as a presentation follow-up, not a functional defect.
+
+The screenshot also confirms that the account-deletion area is the Settings surface the user relies on for permanent account removal. The destructive action must therefore remain prominent enough to find, but compact enough that it does not dominate the settings page.
+
+### Original behavior being remediated
+- Account deletion already opened a password-confirmation dialog.
+- The existing account-deletion request, password requirement, success logout/redirect, and failure handling were already correct.
+- The prior UI refinement reduced some visual weight, but the mobile composition still stacked the consequence copy and destructive action in a way that produced an oversized block.
+
+### Intended remediation behavior
+- Keep the account-security warning immediately identifiable.
+- Establish a small security kicker and compact heading rather than a large red section title.
+- Keep the destructive treatment restrained: neutral glass surface with a narrow rose security accent instead of a fully tinted red card.
+- Separate the deletion explanation from the final action with a compact divider.
+- Present the deletion consequences as a small, clearly labelled supporting detail.
+- On narrow screens, stack the final action cleanly and make the delete trigger full-width without changing its semantics.
+- Preserve the existing password-confirmation modal and deletion endpoint unchanged.
+
+### Changes
+- Reworked the Danger Zone card hierarchy and spacing in frontend/src/app/(dashboard)/settings/page.tsx.
+- Reduced heading/icon/card density and removed the heavy full-card red treatment.
+- Added a compact “What gets deleted” consequence label.
+- Changed the action area to an intentional two-column desktop layout with a clean mobile single-column fallback.
+- Kept the delete button visually destructive but compact and full-width only on narrow screens.
+- No account-deletion logic, API route, payload, authentication, authorization, or redirect behavior changed.
+
+### Proof requirements
+- Frontend TypeScript and production build must pass.
+- Existing public E2E must remain green.
+- The final merged commit must deploy to the frontend production target.
+- Manual authenticated verification should confirm: Danger Zone is compact on mobile, delete dialog opens, cancel clears the password field, empty password cannot submit, valid deletion follows the existing account-deletion path, and an invalid password does not delete the account.
