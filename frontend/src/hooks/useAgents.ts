@@ -10,8 +10,8 @@ interface AgentApiRecord {
   name: string;
   system_prompt: string;
   temperature: number;
-  document_count?: number;
-  chunk_count?: number;
+  document_count: number;
+  chunk_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -23,8 +23,8 @@ function mapAgent(record: AgentApiRecord): Agent {
     name: record.name,
     systemPrompt: record.system_prompt,
     temperature: record.temperature,
-    documentCount: record.document_count ?? 0,
-    chunkCount: record.chunk_count ?? 0,
+    documentCount: record.document_count,
+    chunkCount: record.chunk_count,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
   };
