@@ -1,7 +1,7 @@
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { AGENT_QUERY_LIMIT } from '../config/constants.js';
 import { db } from '../db/connection.js';
-import { agents, knowledgeChunks, knowledgeDocuments } from '../db/schema.js';
+import { agents } from '../db/schema.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
 
