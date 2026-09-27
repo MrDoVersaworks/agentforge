@@ -6,6 +6,7 @@ import { validate } from '../middleware/validate.js';
 import { agentCreateSchema, agentUpdateSchema } from '../types/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireUserId } from '../utils/requestIdentity.js';
+import { logger } from '../utils/logger.js';
 import {
   createAgent,
   deleteAgent,
@@ -33,8 +34,10 @@ router.post(
 router.get(
   '/',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const agents = await getAgents(requireUserId(req));
+    const userId = requireUserId(req);
+    const agents = await getAgents(userId);
     res.status(200).json({ success: true, data: { agents } });
+    logger.info('TRACE', 'Agent list response sent', { requestId: res.locals.requestId, agentCount: agents.length, agents: agents.map((agent) => ({ agentId: agent.id, documentCount: agent.document_count, chunkCount: agent.chunk_count })) });
   })
 );
 
@@ -42,12 +45,14 @@ router.get(
   '/:id',
   validate(uuidParamsSchema, 'params'),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const agent = await getAgentById(requireUserId(req), req.params.id);
+    const userId = requireUserId(req);
+    const agent = await getAgentById(userId, req.params.id);
     if (agent === null) {
       res.status(404).json({ success: false, message: '[ERR_AGENT_NOT_FOUND] Agent not found.' });
       return;
     }
     res.status(200).json({ success: true, data: { agent } });
+    logger.info('TRACE', 'Agent detail response sent', { requestId: res.locals.requestId, agentId: agent.id, documentCount: agent.document_count, chunkCount: agent.chunk_count });
   })
 );
 
