@@ -200,7 +200,7 @@ export default function DashboardPage() {
           </button>
         </div>
       ) : (
-        <div className="agents-grid">
+        <div className={viewMode === 'list' ? 'agents-grid agents-list' : 'agents-grid'}>
           {agents.map((agent) => (
             <div key={agent.id} className={viewMode === 'list' ? 'agent-card agent-card-list glass' : 'agent-card glass'}>
               <div className="agent-card-header">
@@ -430,11 +430,16 @@ export default function DashboardPage() {
           transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
         }
         .agent-card:hover { transform: translateY(-2px); border-color: rgba(139, 92, 246, 0.28); box-shadow: var(--shadow-md); }
+        .agents-list {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
         .agent-card-list {
           display: grid;
-          grid-template-columns: minmax(220px, 1.05fr) minmax(280px, 2fr) minmax(150px, 0.7fr) auto;
+          grid-template-columns: minmax(190px, 1.05fr) minmax(260px, 2fr) minmax(140px, 0.7fr) auto;
           align-items: center;
-          gap: 22px;
+          gap: 20px;
           min-height: 0;
           padding: 18px 20px;
         }
@@ -497,9 +502,29 @@ export default function DashboardPage() {
 
         .agent-actions {
           display: grid;
-          grid-template-columns: minmax(82px, 1fr) minmax(74px, 0.8fr) 38px 38px;
+          grid-template-columns: minmax(82px, 1fr) minmax(74px, 0.8fr) 44px 44px;
           gap: 8px;
           margin-top: auto;
+          align-items: stretch;
+        }
+        .agent-actions .btn-icon {
+          width: 44px;
+          min-width: 44px;
+          height: 44px;
+          min-height: 44px;
+          padding: 0;
+          justify-self: end;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .agent-actions .btn-icon svg {
+          width: 18px;
+          height: 18px;
+          stroke-width: 2;
+        }
+        .agent-card-list .agent-actions .btn-icon {
+          justify-self: stretch;
         }
         .hover-rose:hover {
           color: var(--accent-rose) !important;
@@ -599,6 +624,19 @@ export default function DashboardPage() {
           margin-top: 24px;
         }
 
+        @media (max-width: 1100px) and (min-width: 769px) {
+          .agent-card-list {
+            grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.4fr) minmax(120px, .7fr);
+          }
+          .agent-card-list .agent-actions {
+            grid-column: 1 / -1;
+            justify-content: flex-start;
+          }
+          .agent-card-list .agent-actions .btn-icon {
+            justify-self: start;
+          }
+        }
+
         @media (max-width: 768px) {
           .page-header {
             flex-direction: column;
@@ -608,8 +646,40 @@ export default function DashboardPage() {
           .page-header-actions .btn { width: 100%; }
           .view-toggle { width: 100%; }
           .view-toggle-button { flex: 1; justify-content: center; }
-          .agent-card-list { grid-template-columns: 1fr; gap: 14px; }
-          .agent-card-list .agent-actions { width: 100%; }
+
+          .agents-list {
+            gap: 10px;
+          }
+
+          .agent-card-list {
+            grid-template-columns: 1fr;
+            gap: 12px;
+            padding: 16px;
+          }
+          .agent-card-list .agent-card-header {
+            align-items: flex-start;
+          }
+          .agent-card-list .agent-prompt-preview {
+            max-height: 4.8em;
+          }
+          .agent-card-list .agent-stats {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            padding: 10px 0;
+          }
+          .agent-card-list .agent-actions {
+            width: 100%;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px 44px;
+            gap: 8px;
+          }
+          .agent-card-list .agent-actions .btn-icon {
+            justify-self: stretch;
+          }
+
+          .agent-actions {
+            grid-template-columns: minmax(82px, 1fr) minmax(74px, 0.8fr) 44px 44px;
+          }
           .warning-banner-inner {
             flex-direction: column;
             align-items: flex-start;
