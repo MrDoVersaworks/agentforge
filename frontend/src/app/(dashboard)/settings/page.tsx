@@ -451,7 +451,7 @@ export default function SettingsPage() {
         /* ── Danger Card ── */
         .danger-card {
           position: relative;
-          padding: 22px;
+          padding: 20px;
           overflow: hidden;
           border: 1px solid var(--glass-border);
           background: linear-gradient(180deg, rgba(255,255,255,0.022), rgba(255,255,255,0.012));
@@ -463,7 +463,7 @@ export default function SettingsPage() {
           inset: 0 auto 0 0;
           width: 2px;
           background: var(--accent-rose);
-          opacity: 0.72;
+          opacity: 0.7;
         }
         .danger-card:hover {
           border-color: rgba(251, 113, 133, 0.24);
@@ -473,100 +473,94 @@ export default function SettingsPage() {
         .danger-heading {
           display: flex;
           align-items: center;
-          gap: 11px;
+          gap: 10px;
         }
         .danger-heading-icon {
-          width: 36px;
-          height: 36px;
-          flex: 0 0 36px;
+          width: 34px;
+          height: 34px;
+          flex: 0 0 34px;
           display: grid;
           place-items: center;
           border: 1px solid rgba(251, 113, 133, 0.18);
-          border-radius: 10px;
-          background: rgba(251, 113, 133, 0.065);
+          border-radius: 9px;
+          background: rgba(251, 113, 133, 0.06);
           color: var(--accent-rose);
         }
         .danger-kicker {
           display: block;
           margin-bottom: 2px;
           color: var(--accent-rose);
-          font-size: 0.58rem;
+          font-size: 0.57rem;
           font-weight: 800;
-          letter-spacing: 0.14em;
-          line-height: 1.2;
+          letter-spacing: 0.13em;
+          line-height: 1.15;
         }
         .danger-heading h3 {
-          font-size: 1rem;
-          line-height: 1.25;
+          font-size: 0.98rem;
+          line-height: 1.2;
           font-weight: 750;
           color: var(--text-primary);
         }
         .danger-copy {
-          margin-top: 16px;
+          margin-top: 13px;
         }
         .danger-copy h4 {
-          font-size: 0.88rem;
-          line-height: 1.35;
+          font-size: 0.86rem;
+          line-height: 1.3;
           font-weight: 700;
-          margin-bottom: 5px;
+          margin-bottom: 4px;
         }
         .danger-copy p {
           max-width: 620px;
           color: var(--text-secondary);
-          font-size: 0.76rem;
-          line-height: 1.55;
+          font-size: 0.74rem;
+          line-height: 1.5;
         }
         .danger-action-row {
           display: grid;
           grid-template-columns: minmax(0, 1fr) auto;
           align-items: center;
-          gap: 16px;
-          margin-top: 16px;
-          padding-top: 14px;
+          gap: 14px;
+          margin-top: 13px;
+          padding-top: 12px;
           border-top: 1px solid var(--glass-border);
         }
         .danger-action {
           min-width: 0;
         }
         .danger-consequence {
-          display: flex;
-          align-items: flex-start;
-          gap: 9px;
           min-width: 0;
           color: var(--text-tertiary);
-          font-size: 0.7rem;
+          font-size: 0.69rem;
           line-height: 1.45;
         }
         .danger-consequence-copy {
-          display: grid;
-          gap: 2px;
+          display: block;
           min-width: 0;
         }
         .danger-consequence-label {
           color: var(--text-primary);
-          font-size: 0.68rem;
+          font-size: 0.67rem;
           font-weight: 700;
+          margin-right: 5px;
+        }
+        .danger-consequence-label::after {
+          content: ":";
         }
         .danger-consequence-dot {
-          width: 6px;
-          height: 6px;
-          flex: 0 0 6px;
-          margin-top: 0.42em;
-          border-radius: 50%;
-          background: var(--accent-rose);
-          opacity: 0.75;
+          display: none;
         }
         .danger-trigger {
-          min-width: 148px;
+          min-width: 142px;
           min-height: 38px;
           justify-content: center;
-          gap: 8px;
-          padding: 0 13px;
+          gap: 7px;
+          padding: 0 12px;
           border-radius: 9px;
           background: rgba(251, 113, 133, 0.04);
           border-color: rgba(251, 113, 133, 0.24);
           color: var(--accent-rose);
-          font-size: 0.74rem;
+          font-size: 0.73rem;
           font-weight: 700;
           letter-spacing: 0.005em;
           white-space: nowrap;
@@ -584,44 +578,47 @@ export default function SettingsPage() {
 
         @media (max-width: 1024px) {
           .danger-card {
-            padding: 20px;
+            padding: 18px;
           }
         }
 
         @media (max-width: 560px) {
           .danger-card {
-            padding: 18px;
+            padding: 17px;
           }
           .danger-heading {
-            gap: 10px;
+            gap: 9px;
           }
           .danger-heading-icon {
-            width: 34px;
-            height: 34px;
-            flex-basis: 34px;
+            width: 32px;
+            height: 32px;
+            flex-basis: 32px;
           }
           .danger-heading h3 {
-            font-size: 0.96rem;
+            font-size: 0.94rem;
           }
           .danger-copy {
-            margin-top: 14px;
+            margin-top: 12px;
           }
           .danger-copy h4 {
-            font-size: 0.84rem;
+            font-size: 0.83rem;
           }
           .danger-copy p {
-            font-size: 0.74rem;
-            line-height: 1.55;
+            font-size: 0.73rem;
+            line-height: 1.5;
           }
           .danger-action-row {
             grid-template-columns: 1fr;
-            gap: 12px;
-            margin-top: 14px;
-            padding-top: 13px;
+            gap: 10px;
+            margin-top: 12px;
+            padding-top: 11px;
+          }
+          .danger-consequence {
+            font-size: 0.68rem;
           }
           .danger-trigger {
             width: 100%;
-            min-height: 42px;
+            min-height: 40px;
           }
         }
 
