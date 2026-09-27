@@ -1,5 +1,3 @@
-import { config } from '../config/index.js';
-
 export type LogCategory = 'AUTH' | 'DATABASE' | 'SERVER' | 'AI' | 'KNOWLEDGE' | 'CHAT' | 'SETTINGS' | 'ERROR';
 
 const colors = {
@@ -13,11 +11,8 @@ const colors = {
   magenta: '\x1b[35m',
 };
 
-const IS_DEV = config.NODE_ENV === 'development';
-
 export const logger = {
   info: (category: LogCategory, message: string, data?: unknown) => {
-    if (!IS_DEV) return;
     const color = category === 'DATABASE' ? colors.green : category === 'AI' ? colors.magenta : colors.cyan;
     process.stdout.write(
       `${colors.dim}[${new Date().toISOString()}]${colors.reset} ` +
@@ -30,7 +25,6 @@ export const logger = {
   },
 
   warn: (category: LogCategory, message: string, data?: unknown) => {
-    if (!IS_DEV) return;
     process.stdout.write(
       `${colors.dim}[${new Date().toISOString()}]${colors.reset} ` +
       `${colors.yellow}[${category}]${colors.reset} ` +
