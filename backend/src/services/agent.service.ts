@@ -1,7 +1,7 @@
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { AGENT_QUERY_LIMIT } from '../config/constants.js';
 import { db } from '../db/connection.js';
-import { agents } from '../db/schema.js';
+import { agents, knowledgeChunks, knowledgeDocuments } from '../db/schema.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
 
@@ -33,7 +33,17 @@ export async function createAgent(userId: string, input: CreateAgentInput) {
 export async function getAgents(userId: string) {
   logger.info('DATABASE', 'Retrieving agents for user: ' + userId);
   return db
-    .select()
+    .select({
+      id: agents.id,
+      user_id: agents.user_id,
+      name: agents.name,
+      system_prompt: agents.system_prompt,
+      temperature: agents.temperature,
+      document_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_documents kd WHERE kd.agent_id = ${agents.id})`,
+      chunk_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_chunks kc WHERE kc.agent_id = ${agents.id})`,
+      created_at: agents.created_at,
+      updated_at: agents.updated_at,
+    })
     .from(agents)
     .where(eq(agents.user_id, userId))
     .orderBy(desc(agents.created_at))
@@ -43,7 +53,17 @@ export async function getAgents(userId: string) {
 export async function getAgentById(userId: string, agentId: string) {
   logger.info('DATABASE', 'Retrieving agent: ' + agentId + ' for user: ' + userId);
   const result = await db
-    .select()
+    .select({
+      id: agents.id,
+      user_id: agents.user_id,
+      name: agents.name,
+      system_prompt: agents.system_prompt,
+      temperature: agents.temperature,
+      document_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_documents kd WHERE kd.agent_id = ${agents.id})`,
+      chunk_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_chunks kc WHERE kc.agent_id = ${agents.id})`,
+      created_at: agents.created_at,
+      updated_at: agents.updated_at,
+    })
     .from(agents)
     .where(and(eq(agents.id, agentId), eq(agents.user_id, userId)))
     .limit(1);
