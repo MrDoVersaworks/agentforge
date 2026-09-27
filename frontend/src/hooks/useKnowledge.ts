@@ -31,8 +31,11 @@ export function useKnowledge(agentId: string) {
     setIsLoading(true);
     try {
       const { data } = await api.get(`/knowledge/${agentId}/documents`);
-      setDocuments((data.data?.documents ?? []).map(mapDocument));
-    } catch {
+      const records = data.data?.documents ?? [];
+      console.info('[AgentForge][TRACE] knowledge:documents-response', { agentId, documentCount: records.length, chunkCount: records.reduce((sum: number, record: KnowledgeDocumentApiRecord) => sum + record.chunk_count, 0) });
+      setDocuments(records.map(mapDocument));
+    } catch (error) {
+      console.error('[AgentForge][TRACE] knowledge:documents-fetch-failed', { agentId, error });
       setDocuments([]);
     } finally {
       setIsLoading(false);
@@ -48,6 +51,7 @@ export function useKnowledge(agentId: string) {
           content_text: content,
         });
         const doc = mapDocument(data.data.document);
+        console.info('[AgentForge][TRACE] knowledge:upload-response', { agentId, documentId: doc.id, filename: doc.filename, chunkCount: doc.chunkCount });
         setDocuments((prev) => [doc, ...prev]);
         return doc;
       } finally {
