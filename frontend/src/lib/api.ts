@@ -103,7 +103,7 @@ api.interceptors.response.use(
         documentCount: agent.document_count,
         chunkCount: agent.chunk_count,
       }));
-      const notificationMatch = document.body.innerText.match(/(?:not\\s+grounded|grounded\\s+mode\\s+(?:inactive|off)|without\\s+grounding)[^\\n]*/i);
+      const notificationMatch = document.body.innerText.match(/(?:not\s+grounded|grounded\s+mode\s+(?:inactive|off)|without\s+grounding)[^\n]*/i);
       console.info('[AgentForge][TRACE] request:complete', {
         requestId,
         method: response.config.method,
