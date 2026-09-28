@@ -1,4 +1,4 @@
-import { inArray, sql } from 'drizzle-orm';
+import { count, inArray } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import { knowledgeChunks, knowledgeDocuments } from '../db/schema.js';
 
@@ -18,7 +18,7 @@ export async function getAgentKnowledgeCounts(agentIds: string[]): Promise<Map<s
     db
       .select({
         agent_id: knowledgeDocuments.agent_id,
-        document_count: sql<number>`COUNT(*)::int`,
+        document_count: count(),
       })
       .from(knowledgeDocuments)
       .where(inArray(knowledgeDocuments.agent_id, agentIds))
@@ -26,7 +26,7 @@ export async function getAgentKnowledgeCounts(agentIds: string[]): Promise<Map<s
     db
       .select({
         agent_id: knowledgeChunks.agent_id,
-        chunk_count: sql<number>`COUNT(*)::int`,
+        chunk_count: count(),
       })
       .from(knowledgeChunks)
       .where(inArray(knowledgeChunks.agent_id, agentIds))
@@ -58,7 +58,7 @@ export async function getDocumentChunkCounts(documentIds: string[]): Promise<Map
   const rows = await db
     .select({
       document_id: knowledgeChunks.document_id,
-      chunk_count: sql<number>`COUNT(*)::int`,
+      chunk_count: count(),
     })
     .from(knowledgeChunks)
     .where(inArray(knowledgeChunks.document_id, documentIds))

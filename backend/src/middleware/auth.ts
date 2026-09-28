@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
-import { and, eq, gt, isNull, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull } from 'drizzle-orm';
 import { config } from '../config/index.js';
 import { jwtBlocklist } from '../utils/blocklist.js';
 import { db } from '../db/connection.js';
@@ -86,7 +86,7 @@ export async function authMiddleware(
         and(
           eq(refreshTokens.session_id, user.session_id),
           isNull(refreshTokens.revoked_at),
-          gt(refreshTokens.expires_at, sql.raw('CURRENT_TIMESTAMP'))
+          gt(refreshTokens.expires_at, new Date())
         )
       )
       .limit(1);

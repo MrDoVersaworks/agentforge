@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import { count, desc, eq, sql } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   ADMIN_INBOX_DEFAULT_PAGE_SIZE,
@@ -75,7 +75,7 @@ router.patch(
       .update(contactMessages)
       .set({
         is_read: true,
-        updated_at: sql.raw('CURRENT_TIMESTAMP'),
+        updated_at: new Date(),
       })
       .where(eq(contactMessages.id, req.params.id))
       .returning();
@@ -142,7 +142,7 @@ router.put(
         .update(systemSettings)
         .set({
           ...input,
-          updated_at: sql.raw('CURRENT_TIMESTAMP'),
+          updated_at: new Date(),
         })
         .where(eq(systemSettings.id, existing[0].id))
         .returning();
@@ -180,7 +180,7 @@ router.patch(
       .update(platformReviews)
       .set({
         status: reviewStatus.status,
-        updated_at: sql.raw('CURRENT_TIMESTAMP'),
+        updated_at: new Date(),
       })
       .where(eq(platformReviews.id, req.params.id))
       .returning();

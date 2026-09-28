@@ -39,7 +39,8 @@ test('refresh session contract is durable and rotates one-time refresh tokens', 
   assert.match(schema, /revoked_at: timestamp\('revoked_at'/);
   assert.match(authService, /ERR_REFRESH_TOKEN_REPLAY/);
   assert.match(authService, /refreshTokens\.session_id/);
-  assert.match(authService, /revoked_at: sql\.raw\('CURRENT_TIMESTAMP'\)/);
+  assert.doesNotMatch(authService, /sql\.raw\('CURRENT_TIMESTAMP'\)/);
+  assert.match(authService, /revoked_at: new Date\(\)/);
   assert.match(migration, /ADD COLUMN IF NOT EXISTS "session_id"/);
   assert.match(migration, /ADD COLUMN IF NOT EXISTS "revoked_at"/);
 });
