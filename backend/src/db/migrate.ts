@@ -1,4 +1,5 @@
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import { config } from '../config/index.js';
@@ -27,19 +28,19 @@ async function runMigrations() {
   });
 
   let lockAcquired = false;
+  const db = drizzle(client, { schema });
 
   try {
     await client.connect();
 
     logger.info('DATABASE', 'Acquiring PostgreSQL migration lock...');
-    await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
+    await db.execute(sql`SELECT pg_advisory_lock(${MIGRATION_LOCK_KEY})`);
     lockAcquired = true;
     logger.info('DATABASE', 'PostgreSQL migration lock acquired.');
 
-    await client.query('CREATE EXTENSION IF NOT EXISTS vector;');
+    await db.execute(sql`CREATE EXTENSION IF NOT EXISTS vector`);
     logger.info('DATABASE', 'pgvector extension active. Running committed migrations...');
 
-    const db = drizzle(client, { schema });
     await migrate(db, { migrationsFolder: './drizzle' });
 
     logger.info('DATABASE', 'Database migrations completed successfully.');
@@ -49,7 +50,7 @@ async function runMigrations() {
   } finally {
     if (lockAcquired) {
       try {
-        await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]);
+        await db.execute(sql`SELECT pg_advisory_unlock(${MIGRATION_LOCK_KEY})`);
         logger.info('DATABASE', 'PostgreSQL migration lock released.');
       } catch (unlockError) {
         logger.error('ERROR', 'Failed to release PostgreSQL migration lock:', unlockError);
