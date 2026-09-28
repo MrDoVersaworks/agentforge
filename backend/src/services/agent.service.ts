@@ -4,6 +4,7 @@ import { db } from '../db/connection.js';
 import { agents } from '../db/schema.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
+import { getAgentKnowledgeCounts } from './knowledge-counts.service.js';
 
 interface CreateAgentInput {
   name: string;
@@ -43,8 +44,6 @@ export async function getAgents(userId: string) {
       name: agents.name,
       system_prompt: agents.system_prompt,
       temperature: agents.temperature,
-      document_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_documents kd WHERE kd.agent_id = ${agents.id})`,
-      chunk_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_chunks kc WHERE kc.agent_id = ${agents.id})`,
       created_at: agents.created_at,
       updated_at: agents.updated_at,
     })
@@ -53,16 +52,23 @@ export async function getAgents(userId: string) {
     .orderBy(desc(agents.created_at))
     .limit(AGENT_QUERY_LIMIT);
 
+  const counts = await getAgentKnowledgeCounts(result.map((agent) => agent.id));
+  const enrichedResult = result.map((agent) => ({
+    ...agent,
+    document_count: counts.get(agent.id)?.document_count ?? 0,
+    chunk_count: counts.get(agent.id)?.chunk_count ?? 0,
+  }));
+
   logger.info('TRACE', 'Agent list query completed', {
     userId,
-    agentCount: result.length,
-    agents: result.map((agent) => ({
+    agentCount: enrichedResult.length,
+    agents: enrichedResult.map((agent) => ({
       agentId: agent.id,
       documentCount: agent.document_count,
       chunkCount: agent.chunk_count,
     })),
   });
-  return result;
+  return enrichedResult;
 }
 
 export async function getAgentById(userId: string, agentId: string) {
@@ -74,8 +80,6 @@ export async function getAgentById(userId: string, agentId: string) {
       name: agents.name,
       system_prompt: agents.system_prompt,
       temperature: agents.temperature,
-      document_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_documents kd WHERE kd.agent_id = ${agents.id})`,
-      chunk_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_chunks kc WHERE kc.agent_id = ${agents.id})`,
       created_at: agents.created_at,
       updated_at: agents.updated_at,
     })
@@ -88,14 +92,21 @@ export async function getAgentById(userId: string, agentId: string) {
     return null;
   }
 
+  const counts = await getAgentKnowledgeCounts([agentId]);
+  const enrichedAgent = {
+    ...result[0],
+    document_count: counts.get(agentId)?.document_count ?? 0,
+    chunk_count: counts.get(agentId)?.chunk_count ?? 0,
+  };
+
   logger.info('TRACE', 'Agent detail query completed', {
     userId,
     agentId,
-    documentCount: result[0].document_count,
-    chunkCount: result[0].chunk_count,
+    documentCount: enrichedAgent.document_count,
+    chunkCount: enrichedAgent.chunk_count,
   });
 
-  return result[0];
+  return enrichedAgent;
 }
 
 export async function updateAgent(
