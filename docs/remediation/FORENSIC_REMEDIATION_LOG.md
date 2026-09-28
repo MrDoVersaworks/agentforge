@@ -881,3 +881,45 @@ The screenshot also confirms that the account-deletion area is the Settings surf
 **Proof contract:** After one upload and one navigation away/back cycle, the logs must let us determine whether the value becomes zero at persistence, database read, API response, frontend mapping, or frontend state/rendering. This is diagnostic instrumentation only and must be removed or reduced once the root cause is conclusively identified.
 
 **Existing behavior that must remain:** The authoritative PostgreSQL count queries remain the source of truth; no caching layer, endpoint contract, authentication behavior, knowledge persistence semantics, or destructive-action behavior is changed by this tracing work.
+
+## 2026-09-28 — Knowledge count query remediation
+
+### Original behavior
+- Agent list/detail and post-upload verification used correlated sql selected fields that interpolated Drizzle table columns into the subquery.
+- Document listing used the same pattern for document-to-chunk counts.
+- Production evidence showed PostgreSQL contained 3 documents and 10 chunks with correct relationships, while application count responses were 0/0 and document chunk counts were 0.
+- The forensic conclusion was that the database data and ownership relationships were correct; the failure was in the generated application query shape under the installed Drizzle ORM version.
+
+### Intended remediation behavior
+- Knowledge counts must be computed from PostgreSQL without relying on correlated selected sql expressions whose outer-column qualification can be rewritten by the ORM.
+- Agent counts must remain scoped to the authenticated user's agents.
+- Document chunk counts must remain scoped to the documents already selected for the authenticated agent.
+- API field names and frontend mapping remain unchanged.
+
+### Changes
+- Added knowledge-counts.service.ts.
+- Replaced correlated selected sql count fields with grouped PostgreSQL count queries using Drizzle's inArray and groupBy.
+- Agent list/detail now load the user-scoped agent rows first and enrich them from grouped document/chunk counts.
+- Knowledge document listing now loads the user-scoped document rows first and enriches them from grouped chunk counts.
+- Post-upload persistence verification now uses the same grouped count helper.
+- No Drizzle upgrade was performed at this stage. The dependency remains drizzle-orm ^0.45.2; the remediation changes the query construction rather than depending on an ORM version change.
+- Added a regression contract test that fails if the vulnerable correlated selected-sql pattern is reintroduced and requires the grouped-count implementation.
+
+### Existing behavior that must remain
+- Agent ownership checks and user scoping remain server-side and unchanged.
+- Knowledge chunking, embedding generation/concurrency, transactional persistence, pgvector storage, retrieval, deletion, and API response field names remain unchanged.
+- A legitimate zero-document/zero-chunk agent still returns zero.
+- Counts for one agent cannot include another agent's documents or chunks.
+- Per-document chunk counts remain accurate.
+- No secrets, document contents, embeddings, or credentials are logged.
+
+### Proof required before merge
+1. Backend typecheck and production build.
+2. Backend test suite including the new regression test.
+3. Existing frontend typecheck/build and Playwright/E2E checks.
+4. Production or integration database verification that the previously reproduced dataset returns 3 documents and 10 chunks, with each document returning its actual chunk count.
+5. Verify an unrelated agent/user cannot affect the selected counts.
+6. Inspect the deployed production response after the remediation reaches production; do not infer runtime success from source or CI alone.
+
+### Rollback boundary
+If the grouped query remediation fails in CI or runtime, do not immediately upgrade Drizzle. First capture the exact failure and generated SQL/runtime evidence, then evaluate whether a Drizzle upgrade is justified by a verified fix for the underlying qualification behavior.
