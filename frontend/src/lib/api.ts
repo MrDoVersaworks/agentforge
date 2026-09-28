@@ -79,6 +79,13 @@ api.interceptors.response.use(
         method: response.config.method,
         url: response.config.url,
         status: response.status,
+        agentDetail: payload?.agent ? {
+          agentId: payload.agent.id,
+          documentCount: payload.agent.document_count,
+          chunkCount: payload.agent.chunk_count,
+          documentCountType: typeof payload.agent.document_count,
+          chunkCountType: typeof payload.agent.chunk_count,
+        } : undefined,
         agentCounts: payload?.agents?.map?.((agent: { id?: string; document_count?: number; chunk_count?: number }) => ({
           agentId: agent.id,
           documentCount: agent.document_count,
