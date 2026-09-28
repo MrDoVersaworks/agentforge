@@ -3,6 +3,7 @@ import { db } from '../db/connection.js';
 import { conversations, messages, agents, users, knowledgeChunks, knowledgeDocuments } from '../db/schema.js';
 import { decrypt } from './crypto.service.js';
 import { generateEmbedding, generateChatResponse, generateChatResponseStream } from './gemini.service.js';
+import { getAgentKnowledgeCounts } from './knowledge-counts.service.js';
 import { logger } from '../utils/logger.js';
 
 export async function createConversation(userId: string, agentId: string, title?: string) {
@@ -113,23 +114,16 @@ export async function queryRAGAndRespond(
 
   const convo = convoRows[0];
 
-  const groundingState = await db
-    .select({
-      document_id: knowledgeDocuments.id,
-      chunk_count: sql<number>`count(${knowledgeChunks.id})`,
-    })
-    .from(knowledgeDocuments)
-    .leftJoin(knowledgeChunks, eq(knowledgeChunks.document_id, knowledgeDocuments.id))
-    .where(eq(knowledgeDocuments.agent_id, convo.agent_id))
-    .groupBy(knowledgeDocuments.id);
+  const groundingCounts = await getAgentKnowledgeCounts([convo.agent_id]);
+  const groundingState = groundingCounts.get(convo.agent_id);
 
   logger.info('TRACE', 'Grounding preflight state', {
     userId,
     conversationId,
     agentId: convo.agent_id,
-    documentCount: groundingState.length,
-    chunkCount: groundingState.reduce((total, row) => total + Number(row.chunk_count), 0),
-    documents: groundingState.map((row) => ({ documentId: row.document_id, chunkCount: Number(row.chunk_count) })),
+    documentCount: groundingState?.document_count ?? 0,
+    chunkCount: groundingState?.chunk_count ?? 0,
+    source: 'postgres-via-drizzle-grouped-counts',
   });
 
   if (!convo.encrypted_gemini_key) {
