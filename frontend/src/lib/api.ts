@@ -116,7 +116,7 @@ api.interceptors.response.use(
         notificationText: notificationMatch?.[0],
       });
 
-      if (typeof response.config.url === 'string' && /\\/agents(?:\\/[^/]+)?$/.test(response.config.url)) {
+      if (typeof response.config.url === 'string' && /\/agents(?:\/[^/]+)?$/.test(response.config.url)) {
         sendClientDiagnostic({
           event: 'agent-response-ui-state',
           requestId,
