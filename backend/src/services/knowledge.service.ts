@@ -16,6 +16,10 @@ import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
 import { decrypt } from './crypto.service.js';
 import { generateEmbedding } from './gemini.service.js';
+import {
+  getAgentKnowledgeCounts,
+  getDocumentChunkCounts,
+} from './knowledge-counts.service.js';
 
 interface AddDocumentInput {
   filename: string;
@@ -26,7 +30,6 @@ interface EmbeddedChunk {
   chunkText: string;
   embedding: number[];
 }
-
 
 export function chunkText(
   text: string,
@@ -186,21 +189,15 @@ export async function addDocument(
   logger.info('KNOWLEDGE', 'Document embeddings generated.', { chunkCount: embeddings.length, dimension: 768 });
   const document = await persistDocument(agentId, input, embeddings);
 
-  const persistedCounts = await db
-    .select({
-      document_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_documents kd WHERE kd.agent_id = ${agents.id})`,
-      chunk_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_chunks kc WHERE kc.agent_id = ${agents.id})`,
-    })
-    .from(agents)
-    .where(and(eq(agents.id, agentId), eq(agents.user_id, userId)))
-    .limit(1);
+  const persistedCounts = await getAgentKnowledgeCounts([agentId]);
+  const counts = persistedCounts.get(agentId);
 
   logger.info('TRACE', 'Knowledge persistence verified after upload', {
     userId,
     agentId,
     documentId: document.id,
-    documentCount: persistedCounts[0]?.document_count ?? null,
-    chunkCount: persistedCounts[0]?.chunk_count ?? null,
+    documentCount: counts?.document_count ?? 0,
+    chunkCount: counts?.chunk_count ?? 0,
   });
 
   logger.info('KNOWLEDGE', 'Successfully integrated document: ' + input.filename, {
@@ -219,24 +216,29 @@ export async function getDocuments(userId: string, agentId: string) {
       id: knowledgeDocuments.id,
       filename: knowledgeDocuments.filename,
       created_at: knowledgeDocuments.created_at,
-      chunk_count: sql<number>`(SELECT COUNT(*)::int FROM knowledge_chunks kc WHERE kc.document_id = ${knowledgeDocuments.id})`,
     })
     .from(knowledgeDocuments)
     .where(eq(knowledgeDocuments.agent_id, agentId))
     .limit(KNOWLEDGE_DOCUMENT_QUERY_LIMIT);
 
+  const chunkCounts = await getDocumentChunkCounts(documents.map((document) => document.id));
+  const enrichedDocuments = documents.map((document) => ({
+    ...document,
+    chunk_count: chunkCounts.get(document.id) ?? 0,
+  }));
+
   logger.info('TRACE', 'Knowledge document query completed', {
     userId,
     agentId,
-    documentCount: documents.length,
-    documents: documents.map((document) => ({
+    documentCount: enrichedDocuments.length,
+    documents: enrichedDocuments.map((document) => ({
       documentId: document.id,
       filename: document.filename,
       chunkCount: document.chunk_count,
     })),
   });
 
-  return documents;
+  return enrichedDocuments;
 }
 
 export async function deleteDocument(
@@ -260,5 +262,4 @@ export async function deleteDocument(
   if (deleted.length === 0) {
     throw new AppError('[ERR_DOCUMENT_NOT_FOUND] Document not found or unauthorized.', 404);
   }
-
 }
