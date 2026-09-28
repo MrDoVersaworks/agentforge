@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { and, eq, gt, isNull, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull } from 'drizzle-orm';
 import { REFRESH_TOKEN_BYTES } from '../config/constants.js';
 import { config } from '../config/index.js';
 import {
@@ -78,10 +78,8 @@ async function createRefreshTokenMaterial(): Promise<RefreshTokenMaterial> {
   return { rawToken, tokenHash };
 }
 
-function refreshExpirySql() {
-  return sql.raw(
-    "CURRENT_TIMESTAMP + INTERVAL '" + REFRESH_TOKEN_EXPIRY_DAYS + " days'"
-  );
+function refreshExpiry(): Date {
+  return new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 }
 
 function formatRefreshToken(tokenId: string, rawToken: string): string {
@@ -152,7 +150,7 @@ async function persistRegistration(
         user_id: user.id,
         token_hash: tokenMaterial.tokenHash,
         session_id: sessionId,
-        expires_at: refreshExpirySql(),
+        expires_at: refreshExpiry(),
       })
       .returning({ id: refreshTokens.id });
 
@@ -216,7 +214,7 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
       user_id: user.id,
       token_hash: tokenMaterial.tokenHash,
       session_id: sessionId,
-      expires_at: refreshExpirySql(),
+      expires_at: refreshExpiry(),
     })
     .returning({ id: refreshTokens.id });
 
@@ -263,7 +261,7 @@ export async function refreshAccessToken(refreshTokenValue: string): Promise<Ref
   if (storedToken.revoked_at !== null) {
     await db
       .update(refreshTokens)
-      .set({ revoked_at: sql.raw('CURRENT_TIMESTAMP'), updated_at: sql.raw('CURRENT_TIMESTAMP') })
+      .set({ revoked_at: new Date(), updated_at: new Date() })
       .where(eq(refreshTokens.user_id, storedToken.user_id));
     throw new Error('[ERR_REFRESH_TOKEN_REPLAY] Refresh token replay detected. All sessions were invalidated.');
   }
@@ -293,8 +291,8 @@ export async function refreshAccessToken(refreshTokenValue: string): Promise<Ref
     const revoked = await transaction
       .update(refreshTokens)
       .set({
-        revoked_at: sql.raw('CURRENT_TIMESTAMP'),
-        updated_at: sql.raw('CURRENT_TIMESTAMP'),
+        revoked_at: new Date(),
+        updated_at: new Date(),
       })
       .where(
         and(
@@ -314,7 +312,7 @@ export async function refreshAccessToken(refreshTokenValue: string): Promise<Ref
         user_id: storedToken.user_id,
         token_hash: tokenMaterial.tokenHash,
         session_id: storedToken.session_id,
-        expires_at: refreshExpirySql(),
+        expires_at: refreshExpiry(),
       })
       .returning({ id: refreshTokens.id });
 
@@ -339,7 +337,7 @@ export async function isSessionActive(sessionId: string): Promise<boolean> {
       and(
         eq(refreshTokens.session_id, sessionId),
         isNull(refreshTokens.revoked_at),
-        gt(refreshTokens.expires_at, sql.raw('CURRENT_TIMESTAMP'))
+        gt(refreshTokens.expires_at, new Date())
       )
     )
     .limit(1);
@@ -352,8 +350,8 @@ export async function logoutUser(refreshTokenValue: string): Promise<void> {
   await db
     .update(refreshTokens)
     .set({
-      revoked_at: sql.raw('CURRENT_TIMESTAMP'),
-      updated_at: sql.raw('CURRENT_TIMESTAMP'),
+      revoked_at: new Date(),
+      updated_at: new Date(),
     })
     .where(and(eq(refreshTokens.id, tokenId), isNull(refreshTokens.revoked_at)));
   logger.info('AUTH', 'Successfully invalidated session refresh token ID: ' + tokenId);
