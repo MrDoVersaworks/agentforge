@@ -91,7 +91,9 @@ router.post(
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
         res.flushHeaders();
+        logger.info('CHAT', 'Chat SSE stream opened', { requestId: res.locals.requestId, conversationId: convoId });
 
         await queryRAGAndRespond(
           userId,
@@ -112,7 +114,8 @@ router.post(
         logger.info('TRACE', 'Chat message response sent', { requestId: res.locals.requestId, conversationId: convoId, responseLength: response.length });
       }
     } catch (error: unknown) {
-      logger.error('CHAT', 'Chat message request failed', { requestId: res.locals.requestId, conversationId: convoId, error: (error as Error).message });
+      const errorCode = error instanceof Error && error.message.match(/^\\[ERR_[^\\]]+\\]/)?.[0] ?? '[ERR_CHAT_REQUEST]';
+      logger.error('CHAT', 'Chat message request failed', { requestId: res.locals.requestId, conversationId: convoId, errorCode });
       if (body.stream) {
         res.write(`data: ${JSON.stringify({ error: (error as Error).message })}\n\n`);
         res.end();
