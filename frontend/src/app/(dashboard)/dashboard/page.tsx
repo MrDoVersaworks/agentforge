@@ -1,11 +1,44 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAgents } from '@/hooks/useAgents';
 import { useToast } from '@/hooks/useToast';
 import type { Agent } from '@/types';
+
+function AgentName({ name }: { name: string }) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    const text = textRef.current;
+    if (!viewport || !text) return;
+
+    const measure = () => {
+      setIsOverflowing(text.scrollWidth > viewport.clientWidth + 1);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(viewport);
+    observer.observe(text);
+    return () => observer.disconnect();
+  }, [name]);
+
+  return (
+    <div ref={viewportRef} className={`agent-name-viewport ${isOverflowing ? 'is-overflowing' : ''}`} title={name}>
+      <div className="agent-name-track">
+        <span ref={textRef} className="agent-name-text">{name}</span>
+        {isOverflowing && (
+          <span className="agent-name-text agent-name-clone" aria-hidden="true">{name}</span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -204,7 +237,7 @@ export default function DashboardPage() {
           {agents.map((agent) => (
             <div key={agent.id} className={viewMode === 'list' ? 'agent-card agent-card-list glass' : 'agent-card glass'}>
               <div className="agent-card-header">
-                <h3 className="agent-name">{agent.name}</h3>
+                <AgentName name={agent.name} />
                 <div className="agent-meta">
                   <span className="badge badge-violet">Temp {agent.temperature}</span>
                 </div>
@@ -455,10 +488,39 @@ export default function DashboardPage() {
           gap: 12px;
           margin-bottom: 12px;
         }
-        .agent-name {
+        .agent-name-viewport {
+          min-width: 0;
+          flex: 1;
+          overflow: hidden;
+          position: relative;
+          white-space: nowrap;
+        }
+        .agent-name-track {
+          display: inline-flex;
+          min-width: max-content;
+        }
+        .agent-name-text {
+          flex: none;
           font-size: 1.1rem;
           font-weight: 700;
           color: var(--text-primary);
+          white-space: nowrap;
+        }
+        .agent-name-viewport.is-overflowing .agent-name-track {
+          animation: agent-name-marquee 9s linear infinite;
+          will-change: transform;
+        }
+        .agent-name-viewport.is-overflowing .agent-name-text {
+          padding-right: 3rem;
+        }
+        @keyframes agent-name-marquee {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .agent-name-viewport.is-overflowing .agent-name-track {
+            animation: none;
+          }
         }
         .agent-prompt-preview {
           font-size: 0.85rem;
