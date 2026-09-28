@@ -1,4 +1,4 @@
-import { eq, and, asc, desc, gt, sql } from 'drizzle-orm';
+import { eq, and, asc, desc, gt, sql, count } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import { conversations, messages, agents, users, knowledgeChunks, knowledgeDocuments } from '../db/schema.js';
 import { decrypt } from './crypto.service.js';
@@ -83,9 +83,10 @@ export async function queryRAGAndRespond(
   conversationId: string,
   userMessage: string,
   stream: boolean,
-  onChunk?: (text: string) => void
+  onChunk?: (text: string) => void,
+  requestId?: string
 ): Promise<string> {
-  logger.info('CHAT', `Initiating RAG pipeline for conversation: ${conversationId}`);
+  logger.info('CHAT', 'RAG pipeline started', { requestId, conversationId });
 
   // 1. Verify ownership and fetch associated agent/user
   const convoRows = await db
@@ -141,7 +142,18 @@ export async function queryRAGAndRespond(
   let contextChunks: string[] = [];
   try {
     const queryEmbedding = await generateEmbedding(geminiKey, userMessage);
+    logger.info('TRACE', 'RAG query embedding generated', {
+      conversationId,
+      agentId: convo.agent_id,
+      embeddingDimension: queryEmbedding.length,
+    });
     const vectorLiteral = `[${queryEmbedding.join(',')}]`;
+
+    const inventoryRows = await db
+      .select({ chunkCount: count() })
+      .from(knowledgeChunks)
+      .where(eq(knowledgeChunks.agent_id, convo.agent_id));
+    const availableChunkCount = Number(inventoryRows[0]?.chunkCount ?? 0);
 
     // pgvector cosine similarity search
     const cosineDistance = sql<number>`${knowledgeChunks.embedding} <=> ${vectorLiteral}::vector`;
@@ -163,9 +175,19 @@ export async function queryRAGAndRespond(
       .limit(5);
 
     contextChunks = results.map((row) => row.chunk_text);
-    logger.info('CHAT', `Retrieved ${contextChunks.length} relevant context chunks.`);
+    logger.info('CHAT', 'RAG retrieval completed', {
+      requestId,
+      conversationId,
+      agentId: convo.agent_id,
+      queryEmbeddingDimensions: queryEmbedding.length,
+      availableChunkCount,
+      similarityThreshold: 0.3,
+      retrievedChunkCount: contextChunks.length,
+      retrievedSimilarities: results.map((row) => Number(row.similarity)),
+      groundedContextAvailable: contextChunks.length > 0,
+    });
   } catch (vectorError) {
-    logger.warn('CHAT', 'RAG vector lookup failed or returned no chunks, proceeding with conversation history only', vectorError);
+    logger.warn('CHAT', 'RAG vector lookup failed; proceeding with conversation history only', { requestId, conversationId, agentId: convo.agent_id, error: vectorError instanceof Error ? vectorError.message : String(vectorError) });
   }
 
   // 4. Retrieve chat history (previous 15 messages for short, high-quality context)
@@ -220,6 +242,6 @@ export async function queryRAGAndRespond(
     content: aiResponse,
   });
 
-  logger.info('CHAT', `Successfully generated AI message in conversation: ${conversationId}`);
+  logger.info('CHAT', 'Chat response generated', { requestId, conversationId, agentId: convo.agent_id, retrievedContextChunkCount: contextChunks.length, groundedContextAvailable: contextChunks.length > 0 });
   return aiResponse;
 }

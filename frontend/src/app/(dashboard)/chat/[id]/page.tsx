@@ -7,6 +7,32 @@ import { useToast } from '@/hooks/useToast';
 import api from '@/lib/api';
 import type { Agent } from '@/types';
 
+interface AgentApiRecord {
+  id: string;
+  user_id: string;
+  name: string;
+  system_prompt: string;
+  temperature: number;
+  document_count: number;
+  chunk_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+function mapAgent(record: AgentApiRecord): Agent {
+  return {
+    id: record.id,
+    userId: record.user_id,
+    name: record.name,
+    systemPrompt: record.system_prompt,
+    temperature: record.temperature,
+    documentCount: record.document_count,
+    chunkCount: record.chunk_count,
+    createdAt: record.created_at,
+    updatedAt: record.updated_at,
+  };
+}
+
 export default function ChatPage({ params }: { params: { id: string } }) {
   const agentId = params.id;
   const router = useRouter();
@@ -34,8 +60,17 @@ export default function ChatPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     const fetchAgent = async () => {
       try {
-        const response = await api.get<{ data: Agent }>(`/agents/${agentId}`);
-        setAgent(response.data.data);
+        const response = await api.get<{ data: { agent: AgentApiRecord } }>(`/agents/${agentId}`);
+        const record = response.data.data.agent;
+        const mappedAgent = mapAgent(record);
+        console.info('[AgentForge][TRACE] chat:agent-response', {
+          agentId,
+          apiDocumentCount: record.document_count,
+          apiChunkCount: record.chunk_count,
+          mappedDocumentCount: mappedAgent.documentCount,
+          mappedChunkCount: mappedAgent.chunkCount,
+        });
+        setAgent(mappedAgent);
       } catch {
         addToast('error', 'Failed to retrieve agent details.');
         router.push('/dashboard');

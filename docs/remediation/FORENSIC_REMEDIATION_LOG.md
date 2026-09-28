@@ -923,3 +923,55 @@ The screenshot also confirms that the account-deletion area is the Settings surf
 
 ### Rollback boundary
 If the grouped query remediation fails in CI or runtime, do not immediately upgrade Drizzle. First capture the exact failure and generated SQL/runtime evidence, then evaluate whether a Drizzle upgrade is justified by a verified fix for the underlying qualification behavior.
+
+## 2026-09-28 — Production grounding-state diagnostic instrumentation
+
+### Diagnostic reason
+- Production now returns authoritative non-zero knowledge counts for the affected agent, but the chat UI can still display the grounded-mode-inactive notification.
+- Vercel Runtime Logs alone can confirm the backend agent count response, but browser-only UI state is not automatically visible in the backend logs.
+- Existing browser console tracing therefore did not provide a durable server-side record of the exact UI state seen by the deployed user session.
+
+### Diagnostic instrumentation
+- Added an authenticated `POST /api/diagnostics/client` endpoint that accepts only bounded, non-sensitive diagnostic fields and writes them to the existing structured production logger.
+- Frontend API response tracing now records, for agent responses, the current browser route, authoritative API document/chunk counts, and whether the DOM currently contains a grounded-mode-inactive/not-grounded notification. The diagnostic event is sent asynchronously and failure is intentionally ignored so diagnostics cannot affect product behavior.
+- Chat request tracing now carries the existing request ID into the RAG service.
+- RAG tracing records the available vector-chunk inventory for the agent, query embedding dimensionality, similarity threshold, number of retrieved chunks, retrieved similarity values, and whether grounded context was actually available. No user message, document body, embedding vector, API key, access token, or password is logged.
+- Chat route tracing records request/response lifecycle metadata and message length only.
+
+### Proof target
+The next production trace must let us distinguish these states without relying on the user's phone or browser console:
+1. backend agent endpoint returns non-zero counts;
+2. browser receives those counts;
+3. notification is already visible immediately after the agent response, or appears later;
+4. RAG inventory contains vectors;
+5. RAG retrieval returns relevant chunks or fails/returns zero because of the similarity threshold;
+6. chat generation receives grounded context when retrieval succeeds.
+
+This is diagnostic instrumentation only. It does not intentionally change knowledge persistence, agent count semantics, RAG selection rules, chat generation, authentication, or UI behavior.
+
+
+## 2026-09-28 — Grounded notification forensic finding and expanded chat/RAG tracing
+
+### Root cause identified
+The deployed chat page fetched `GET /api/agents/:id` using a frontend `Agent` type and stored the server response directly in React state. The backend response is wrapped as `data.agent` and uses the server's snake_case fields (`document_count`, `chunk_count`, `system_prompt`, etc.). The chat page was therefore reading `agent.documentCount`, which was undefined even when the API returned a nonzero `document_count`. Its existing fallback converted that undefined value to zero, causing the false "Grounded mode inactive" notification.
+
+This is distinct from the previously remediated PostgreSQL count defect: production now returns authoritative nonzero counts, but the chat page was not mapping that response into its camelCase client model.
+
+### Intended remediation
+- Map the agent detail response through the same explicit API-to-client contract used by `useAgents`.
+- Preserve the notification's legitimate behavior when the authoritative document count is actually zero.
+- Add safe production diagnostics around the chat agent response and RAG retrieval so future failures identify the boundary where state diverges.
+
+### Changes
+- Added an explicit `AgentApiRecord` mapper to the chat page.
+- Chat state now receives `documentCount` and `chunkCount` from `document_count` and `chunk_count` rather than storing the raw API object.
+- Added production-safe frontend tracing for raw API counts and mapped client counts.
+- Expanded backend RAG tracing with conversation/agent identifiers, embedding dimension, retrieved chunk count, similarity values, threshold, and explicit vector-lookup errors.
+- No document content, user messages, embeddings, API keys, access tokens, or passwords are logged.
+
+### Proof contract
+1. CI typecheck/build/tests must pass.
+2. Production chat agent fetch must show matching API and mapped document/chunk counts in logs.
+3. With a nonzero authoritative document count, the grounded-inactive notification must not render.
+4. With zero authoritative documents, the notification must still render.
+5. A chat request must produce RAG retrieval diagnostics showing embedding dimension and retrieved-chunk count, or an explicit retrieval error.
