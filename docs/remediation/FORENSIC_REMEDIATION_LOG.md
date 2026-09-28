@@ -948,3 +948,30 @@ The next production trace must let us distinguish these states without relying o
 6. chat generation receives grounded context when retrieval succeeds.
 
 This is diagnostic instrumentation only. It does not intentionally change knowledge persistence, agent count semantics, RAG selection rules, chat generation, authentication, or UI behavior.
+
+
+## 2026-09-28 — Grounded notification forensic finding and expanded chat/RAG tracing
+
+### Root cause identified
+The deployed chat page fetched `GET /api/agents/:id` using a frontend `Agent` type and stored the server response directly in React state. The backend response is wrapped as `data.agent` and uses the server's snake_case fields (`document_count`, `chunk_count`, `system_prompt`, etc.). The chat page was therefore reading `agent.documentCount`, which was undefined even when the API returned a nonzero `document_count`. Its existing fallback converted that undefined value to zero, causing the false "Grounded mode inactive" notification.
+
+This is distinct from the previously remediated PostgreSQL count defect: production now returns authoritative nonzero counts, but the chat page was not mapping that response into its camelCase client model.
+
+### Intended remediation
+- Map the agent detail response through the same explicit API-to-client contract used by `useAgents`.
+- Preserve the notification's legitimate behavior when the authoritative document count is actually zero.
+- Add safe production diagnostics around the chat agent response and RAG retrieval so future failures identify the boundary where state diverges.
+
+### Changes
+- Added an explicit `AgentApiRecord` mapper to the chat page.
+- Chat state now receives `documentCount` and `chunkCount` from `document_count` and `chunk_count` rather than storing the raw API object.
+- Added production-safe frontend tracing for raw API counts and mapped client counts.
+- Expanded backend RAG tracing with conversation/agent identifiers, embedding dimension, retrieved chunk count, similarity values, threshold, and explicit vector-lookup errors.
+- No document content, user messages, embeddings, API keys, access tokens, or passwords are logged.
+
+### Proof contract
+1. CI typecheck/build/tests must pass.
+2. Production chat agent fetch must show matching API and mapped document/chunk counts in logs.
+3. With a nonzero authoritative document count, the grounded-inactive notification must not render.
+4. With zero authoritative documents, the notification must still render.
+5. A chat request must produce RAG retrieval diagnostics showing embedding dimension and retrieved-chunk count, or an explicit retrieval error.
