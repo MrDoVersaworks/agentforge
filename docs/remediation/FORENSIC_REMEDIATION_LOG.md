@@ -975,3 +975,45 @@ This is distinct from the previously remediated PostgreSQL count defect: product
 3. With a nonzero authoritative document count, the grounded-inactive notification must not render.
 4. With zero authoritative documents, the notification must still render.
 5. A chat request must produce RAG retrieval diagnostics showing embedding dimension and retrieved-chunk count, or an explicit retrieval error.
+
+
+## 2026-09-28 — Production-safe chat generation observability and bounded failure handling
+
+### Trigger
+- Production chat could remain in a loading/streaming state with no visible application error.
+- Runtime evidence for the affected period showed successful GET requests for the conversation resource but no captured POST/generation trace for the attempted agent response. This was insufficient to identify whether the stall occurred before the chat route, during RAG/embedding work, at the Gemini provider boundary, during stream consumption, or while persisting the model response.
+
+### Diagnostic objective
+Establish a correlated, production-safe lifecycle for every chat generation request without logging user message contents, document contents, embeddings, API keys, access tokens, passwords, or provider response bodies.
+
+### Changes on audit-remediation
+- Chat route logs now mark SSE stream open/completion and retain the existing correlation ID.
+- The RAG/chat service logs bounded phase transitions: conversation context resolution, user-message persistence, embedding phase, history loading, model-response persistence, and total pipeline completion.
+- Gemini embedding and chat generation now log start/completion timing, model name, history/context counts, embedding dimension, response length, and provider status/category when the provider rejects a request.
+- Gemini provider failures are classified into authentication/authorization, model/endpoint-not-found, rate-limit, provider-server-error, provider-request-error, or unknown categories. Raw provider error bodies are not logged.
+- Chat generation has a bounded 60-second server-side generation budget; the frontend has a 70-second client-side safety timeout so a stalled stream cannot leave the UI indefinitely in the active state.
+- Stream failures are sent as explicit SSE error events and the frontend now surfaces recognized server error codes instead of leaving the temporary model message in a perpetual typing state.
+- The frontend sends the same bounded request correlation ID used by the backend trace and logs only failure codes, never message contents or authorization data.
+
+### Security boundary
+- Logs contain identifiers needed for correlation, timing, status/category, model name, counts, dimensions, and lengths only.
+- No user prompt, retrieved document text, vector values, Gemini API key, bearer token, cookie, password, or raw provider response body is emitted.
+- Provider-facing API failures are exposed to the user only as actionable, non-secret error codes/messages (for example authentication failure, model not found, rate limited, provider error, or timeout).
+
+### Expected forensic trace
+A healthy request should show, in order, Chat message request received → Conversation context resolved → User message persisted → Embedding generation started/completed (or an explicit vector-lookup failure) → Conversation history loaded → Chat generation started → Chat stream consumption completed → Chat generation completed → Model response persisted → Chat response generated → Chat SSE stream completed.
+
+A failure must terminate the request with a correlated error code rather than leaving the client indefinitely streaming. A provider/API-key problem must therefore become visible as a classified backend error and an actionable frontend message.
+
+### Existing behavior that must remain
+- Authentication, ownership checks, conversation persistence, RAG retrieval semantics, Gemini model selection, streaming response semantics, and message persistence remain functionally unchanged.
+- The existing stop-generation control remains available to the user.
+- The timeout is a failure boundary, not a change to successful response content or retrieval thresholds.
+
+### Proof contract
+1. Backend typecheck/build and tests pass.
+2. Frontend typecheck/build and existing E2E checks pass.
+3. A successful streaming chat shows the complete lifecycle above in Vercel runtime logs with one correlation ID.
+4. Invalid/missing Gemini credentials, invalid model configuration, provider rate limits, provider 5xx responses, and generation timeout each terminate with a bounded error path and no indefinite spinner.
+5. The production log contains no prompt/document content, vector values, API keys, tokens, cookies, passwords, or raw provider error bodies.
+6. The final production deployment is checked after merge; runtime behavior is not inferred from source or preview alone.

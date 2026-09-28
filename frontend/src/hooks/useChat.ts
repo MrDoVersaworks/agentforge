@@ -8,6 +8,7 @@ if (!process.env.NEXT_PUBLIC_API_URL) {
   console.warn('[WARN] NEXT_PUBLIC_API_URL is not defined in the environment.');
 }
 const API_BASE_URL = getApiBaseUrl();
+const CHAT_CLIENT_TIMEOUT_MS = 70_000;
 
 interface ConversationApiRecord {
   id: string;
@@ -104,6 +105,8 @@ export function useChat(agentId: string) {
 
       setIsStreaming(true);
       abortRef.current = new AbortController();
+      const requestId = crypto.randomUUID();
+      const timeoutId = window.setTimeout(() => abortRef.current?.abort(), CHAT_CLIENT_TIMEOUT_MS);
 
       const tempModelId = `stream-${Date.now()}`;
       const tempModelMsg: Message = {
@@ -124,6 +127,7 @@ export function useChat(agentId: string) {
             headers: {
               'Content-Type': 'application/json',
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              'X-Request-ID': requestId,
             },
             credentials: 'include',
             body: JSON.stringify({
@@ -161,6 +165,10 @@ export function useChat(agentId: string) {
 
             try {
               const parsed = JSON.parse(payload);
+              if (parsed.error && typeof parsed.error === 'string') {
+                throw new Error(parsed.error);
+              }
+
               if (parsed.type === 'chunk' && typeof parsed.content === 'string') {
                 setMessages((prev) =>
                   prev.map((m) =>
@@ -177,15 +185,29 @@ export function useChat(agentId: string) {
         }
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
+          const message = err instanceof Error && err.message.startsWith('[ERR_')
+            ? err.message
+            : '⚠️ Failed to get a response. Please try again.';
+          console.error('[AgentForge][TRACE] chat:stream-failed', { requestId, code: message.match(/^\[ERR_[^\]]+\]/)?.[0] ?? 'CLIENT_STREAM_FAILURE' });
           setMessages((prev) =>
             prev.map((m) =>
               m.id === tempModelId
-                ? { ...m, content: '⚠️ Failed to get a response. Please try again.' }
+                ? { ...m, content: message }
+                : m
+            )
+          );
+        } else {
+          console.warn('[AgentForge][TRACE] chat:stream-aborted', { requestId, timeoutMs: CHAT_CLIENT_TIMEOUT_MS });
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempModelId
+                ? { ...m, content: '⚠️ Response timed out. Please try again.' }
                 : m
             )
           );
         }
       } finally {
+        window.clearTimeout(timeoutId);
         setIsStreaming(false);
         abortRef.current = null;
       }

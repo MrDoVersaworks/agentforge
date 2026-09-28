@@ -86,6 +86,7 @@ export async function queryRAGAndRespond(
   onChunk?: (text: string) => void,
   requestId?: string
 ): Promise<string> {
+  const pipelineStartedAt = Date.now();
   logger.info('CHAT', 'RAG pipeline started', { requestId, conversationId });
 
   // 1. Verify ownership and fetch associated agent/user
@@ -113,6 +114,7 @@ export async function queryRAGAndRespond(
   }
 
   const convo = convoRows[0];
+  logger.info('CHAT', 'Conversation context resolved', { requestId, conversationId, agentId: convo.agent_id, model: convo.gemini_model || 'gemini-2.5-flash' });
 
   if (!convo.encrypted_gemini_key) {
     throw new Error('Please configure your Gemini API Key in Settings first.');
@@ -131,17 +133,19 @@ export async function queryRAGAndRespond(
   });
 
   // 2. Insert user message in database
+  const messagePersistStartedAt = Date.now();
   await db.insert(messages).values({
     conversation_id: conversationId,
     role: 'user',
     content: userMessage,
   });
+  logger.info('CHAT', 'User message persisted', { requestId, conversationId, durationMs: Date.now() - messagePersistStartedAt, messageLength: userMessage.length });
 
   // 3. Search Vector Database for semantic chunks (RAG)
-  logger.info('CHAT', 'Generating message query embedding...');
+  logger.info('CHAT', 'RAG embedding phase started', { requestId, conversationId, agentId: convo.agent_id });
   let contextChunks: string[] = [];
   try {
-    const queryEmbedding = await generateEmbedding(geminiKey, userMessage);
+    const queryEmbedding = await generateEmbedding(geminiKey, userMessage, requestId);
     logger.info('TRACE', 'RAG query embedding generated', {
       conversationId,
       agentId: convo.agent_id,
@@ -187,7 +191,7 @@ export async function queryRAGAndRespond(
       groundedContextAvailable: contextChunks.length > 0,
     });
   } catch (vectorError) {
-    logger.warn('CHAT', 'RAG vector lookup failed; proceeding with conversation history only', { requestId, conversationId, agentId: convo.agent_id, error: vectorError instanceof Error ? vectorError.message : String(vectorError) });
+    logger.warn('CHAT', 'RAG vector lookup failed; proceeding with conversation history only', { requestId, conversationId, agentId: convo.agent_id, errorCode: vectorError instanceof Error ? vectorError.message.split(']')[0] + ']' : 'UNKNOWN' });
   }
 
   // 4. Retrieve chat history (previous 15 messages for short, high-quality context)
@@ -208,6 +212,8 @@ export async function queryRAGAndRespond(
       content: msg.content,
     }));
 
+  logger.info('CHAT', 'Conversation history loaded', { requestId, conversationId, historyCount: chatHistory.length });
+
   let aiResponse = '';
 
   if (stream && onChunk) {
@@ -220,7 +226,8 @@ export async function queryRAGAndRespond(
       chatHistory,
       userMessage,
       contextChunks,
-      onChunk
+      onChunk,
+      requestId
     );
   } else {
     // 5b. Non-streaming generation
@@ -231,17 +238,20 @@ export async function queryRAGAndRespond(
       convo.temperature,
       chatHistory,
       userMessage,
-      contextChunks
+      contextChunks,
+      requestId
     );
   }
 
   // 6. Save AI model response in database
+  const responsePersistStartedAt = Date.now();
   await db.insert(messages).values({
     conversation_id: conversationId,
     role: 'model',
     content: aiResponse,
   });
 
-  logger.info('CHAT', 'Chat response generated', { requestId, conversationId, agentId: convo.agent_id, retrievedContextChunkCount: contextChunks.length, groundedContextAvailable: contextChunks.length > 0 });
+  logger.info('CHAT', 'Model response persisted', { requestId, conversationId, durationMs: Date.now() - responsePersistStartedAt, responseLength: aiResponse.length });
+  logger.info('CHAT', 'Chat response generated', { requestId, conversationId, agentId: convo.agent_id, retrievedContextChunkCount: contextChunks.length, groundedContextAvailable: contextChunks.length > 0, totalDurationMs: Date.now() - pipelineStartedAt });
   return aiResponse;
 }
