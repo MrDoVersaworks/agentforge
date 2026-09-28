@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import { users } from '../db/schema.js';
 import { encrypt } from './crypto.service.js';
@@ -30,7 +30,7 @@ export async function saveGeminiKey(
       encrypted_gemini_key: encrypted.encryptedText,
       gemini_key_iv: encrypted.iv,
       gemini_key_tag: encrypted.tag,
-      updated_at: sql.raw('CURRENT_TIMESTAMP'),
+      updated_at: new Date(),
     })
     .where(eq(users.id, userId))
     .returning({ id: users.id });
@@ -78,7 +78,7 @@ export async function updateSettings(
     .update(users)
     .set({
       ...input,
-      updated_at: sql.raw('CURRENT_TIMESTAMP'),
+      updated_at: new Date(),
     })
     .where(eq(users.id, userId))
     .returning({
@@ -110,7 +110,7 @@ export async function deleteGeminiKey(userId: string): Promise<void> {
       encrypted_gemini_key: null,
       gemini_key_iv: null,
       gemini_key_tag: null,
-      updated_at: sql.raw('CURRENT_TIMESTAMP'),
+      updated_at: new Date(),
     })
     .where(eq(users.id, userId))
     .returning({ id: users.id });
