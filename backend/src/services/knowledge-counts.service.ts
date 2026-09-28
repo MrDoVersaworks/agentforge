@@ -58,7 +58,7 @@ export async function getDocumentChunkCounts(documentIds: string[]): Promise<Map
   const rows = await db
     .select({
       document_id: knowledgeChunks.document_id,
-      chunk_count: sql<number>`COUNT(*)::int`,
+      chunk_count: count(),
     })
     .from(knowledgeChunks)
     .where(inArray(knowledgeChunks.document_id, documentIds))
