@@ -163,23 +163,26 @@ export function useChat(agentId: string) {
             const payload = line.slice(6).trim();
             if (payload === '[DONE]') continue;
 
+            let parsed: { type?: string; content?: string; error?: string };
             try {
-              const parsed = JSON.parse(payload);
-              if (parsed.error && typeof parsed.error === 'string') {
-                throw new Error(parsed.error);
-              }
-
-              if (parsed.type === 'chunk' && typeof parsed.content === 'string') {
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === tempModelId
-                      ? { ...m, content: m.content + parsed.content }
-                      : m
-                  )
-                );
-              }
+              parsed = JSON.parse(payload) as typeof parsed;
             } catch {
               // Non-JSON line, skip.
+              continue;
+            }
+
+            if (parsed.error && typeof parsed.error === 'string') {
+              throw new Error(parsed.error);
+            }
+
+            if (parsed.type === 'chunk' && typeof parsed.content === 'string') {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === tempModelId
+                    ? { ...m, content: m.content + parsed.content }
+                    : m
+                )
+              );
             }
           }
         }
