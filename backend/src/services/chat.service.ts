@@ -113,6 +113,25 @@ export async function queryRAGAndRespond(
 
   const convo = convoRows[0];
 
+  const groundingState = await db
+    .select({
+      document_id: knowledgeDocuments.id,
+      chunk_count: sql<number>`count(${knowledgeChunks.id})`,
+    })
+    .from(knowledgeDocuments)
+    .leftJoin(knowledgeChunks, eq(knowledgeChunks.document_id, knowledgeDocuments.id))
+    .where(eq(knowledgeDocuments.agent_id, convo.agent_id))
+    .groupBy(knowledgeDocuments.id);
+
+  logger.info('TRACE', 'Grounding preflight state', {
+    userId,
+    conversationId,
+    agentId: convo.agent_id,
+    documentCount: groundingState.length,
+    chunkCount: groundingState.reduce((total, row) => total + Number(row.chunk_count), 0),
+    documents: groundingState.map((row) => ({ documentId: row.document_id, chunkCount: Number(row.chunk_count) })),
+  });
+
   if (!convo.encrypted_gemini_key) {
     throw new Error('Please configure your Gemini API Key in Settings first.');
   }
@@ -147,6 +166,14 @@ export async function queryRAGAndRespond(
     const cosineDistance = sql<number>`${knowledgeChunks.embedding} <=> ${vectorLiteral}::vector`;
     const similarity = sql<number>`1 - (${cosineDistance})`;
 
+    logger.info('TRACE', 'Grounding retrieval started', {
+      conversationId,
+      agentId: convo.agent_id,
+      queryCharacterCount: userMessage.length,
+      similarityThreshold: 0.3,
+      resultLimit: 5,
+    });
+
     const results = await db
       .select({
         chunk_text: knowledgeChunks.chunk_text,
@@ -163,8 +190,20 @@ export async function queryRAGAndRespond(
       .limit(5);
 
     contextChunks = results.map((row) => row.chunk_text);
+    logger.info('TRACE', 'Grounding retrieval completed', {
+      conversationId,
+      agentId: convo.agent_id,
+      matchedChunkCount: results.length,
+      similarities: results.map((row) => Number(row.similarity)),
+      grounded: results.length > 0,
+    });
     logger.info('CHAT', `Retrieved ${contextChunks.length} relevant context chunks.`);
   } catch (vectorError) {
+    logger.error('TRACE', 'Grounding retrieval failed', {
+      conversationId,
+      agentId: convo.agent_id,
+      error: vectorError instanceof Error ? vectorError.message : String(vectorError),
+    });
     logger.warn('CHAT', 'RAG vector lookup failed or returned no chunks, proceeding with conversation history only', vectorError);
   }
 
