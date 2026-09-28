@@ -1,4 +1,4 @@
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { AGENT_QUERY_LIMIT } from '../config/constants.js';
 import { db } from '../db/connection.js';
 import { agents } from '../db/schema.js';
@@ -118,7 +118,7 @@ export async function updateAgent(
 
   const updateData = {
     ...input,
-    updated_at: sql.raw('CURRENT_TIMESTAMP'),
+    updated_at: new Date(),
   };
 
   const result = await db
