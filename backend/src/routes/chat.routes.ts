@@ -4,6 +4,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { conversationCreateSchema, messageSendSchema } from '../types/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { logger } from '../utils/logger.js';
 import {
   createConversation,
   getConversations,
@@ -84,6 +85,7 @@ router.post(
     const convoId = req.params.convoId;
     const body = req.body as { content: string; stream?: boolean };
 
+    logger.info('TRACE', 'Chat message request received', { requestId: res.locals.requestId, userId, conversationId: convoId, stream: Boolean(body.stream), messageLength: body.content.length });
     try {
       if (body.stream) {
         res.setHeader('Content-Type', 'text/event-stream');
@@ -98,16 +100,19 @@ router.post(
           true,
           (chunk: string) => {
             res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
-          }
+          },
+          res.locals.requestId
         );
 
         res.write('data: [DONE]\n\n');
         res.end();
       } else {
-        const response = await queryRAGAndRespond(userId, convoId, body.content, false);
+        const response = await queryRAGAndRespond(userId, convoId, body.content, false, undefined, res.locals.requestId);
         res.status(200).json({ success: true, data: { content: response } });
+        logger.info('TRACE', 'Chat message response sent', { requestId: res.locals.requestId, conversationId: convoId, responseLength: response.length });
       }
     } catch (error: unknown) {
+      logger.error('CHAT', 'Chat message request failed', { requestId: res.locals.requestId, conversationId: convoId, error: (error as Error).message });
       if (body.stream) {
         res.write(`data: ${JSON.stringify({ error: (error as Error).message })}\n\n`);
         res.end();
