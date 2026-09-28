@@ -923,3 +923,27 @@ The screenshot also confirms that the account-deletion area is the Settings surf
 
 ### Rollback boundary
 If the grouped query remediation fails in CI or runtime, do not immediately upgrade Drizzle. First capture the exact failure and generated SQL/runtime evidence, then evaluate whether a Drizzle upgrade is justified by a verified fix for the underlying qualification behavior.
+
+## 2026-09-28 — Grounding-state forensic instrumentation
+
+### Diagnostic finding
+Production deployment verification showed the agent detail endpoint returning nonzero authoritative knowledge counts (2 documents / 7 chunks for the observed agent), while the user-visible chat grounding notice still appeared. This proves the remaining symptom is no longer explained by the previously remediated PostgreSQL count query or Vercel deployment state.
+
+### Diagnostic objective
+Make the application explicitly report the grounding state at each boundary so the next production interaction identifies the first incorrect value rather than relying on inference:
+1. conversation resolves to an agent;
+2. PostgreSQL is queried for the agent's current document/chunk state;
+3. RAG retrieval starts with threshold and result-limit metadata;
+4. vector retrieval either returns matched chunks/similarities or emits a structured failure;
+5. the frontend records the exact agent-detail count values and their runtime types.
+
+### Instrumentation added
+- Backend chat service logs a grounding preflight snapshot for the conversation's agent, including document IDs and per-document chunk counts, without document content or embeddings.
+- Backend chat service logs RAG retrieval start/completion/failure, including threshold, limit, query length, match count, similarity values, and grounded boolean.
+- Frontend API tracing now records agent-detail count values and JavaScript runtime types in addition to existing agent-list tracing.
+
+### Safety boundary
+No API keys, authorization tokens, document bodies, embedding vectors, or user message contents are logged. Query length is logged instead of query text. The instrumentation does not alter grounding decisions or retrieval behavior.
+
+### Proof requirement
+After deployment, one navigation to chat and one chat message must identify whether the false notice is caused by agent-state presentation, missing/incorrect frontend mapping, or actual RAG retrieval failure. Remove or reduce this diagnostic instrumentation after the root cause is conclusively identified.
