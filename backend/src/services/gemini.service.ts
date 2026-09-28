@@ -235,11 +235,20 @@ export async function generateChatResponseStream(
     const result = await withTimeout(chat.sendMessageStream(fullPrompt), CHAT_GENERATION_TIMEOUT_MS, '[ERR_GEMINI_CHAT_TIMEOUT]');
 
     let fullText = '';
-    for await (const chunk of result.stream) {
-      const chunkText = chunk.text();
-      fullText += chunkText;
-      onChunk(chunkText);
-    }
+    let chunkCount = 0;
+    let firstChunkAt: number | undefined;
+    const consumeStream = async () => {
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        chunkCount += 1;
+        if (firstChunkAt === undefined) firstChunkAt = Date.now();
+        fullText += chunkText;
+        onChunk(chunkText);
+      }
+    };
+    await withTimeout(consumeStream(), CHAT_GENERATION_TIMEOUT_MS, '[ERR_GEMINI_CHAT_TIMEOUT]');
+
+    logger.info('AI', 'Chat stream consumption completed', { requestId, phase: 'chat', chunkCount, timeToFirstChunkMs: firstChunkAt === undefined ? null : firstChunkAt - startedAt });
 
     if (fullText.trim().length === 0) {
       throw new Error('[ERR_GEMINI_STREAM_EMPTY] Gemini API returned an empty response.');
