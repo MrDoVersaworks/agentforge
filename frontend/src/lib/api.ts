@@ -42,6 +42,29 @@ function getCsrfToken(): string | null {
   return window.localStorage.getItem(CSRF_STORAGE_KEY);
 }
 
+function sendClientDiagnostic(event: {
+  event: string;
+  requestId?: string;
+  endpoint?: string;
+  agentId?: string;
+  documentCount?: number;
+  chunkCount?: number;
+  notificationVisible?: boolean;
+  notificationText?: string;
+  detail?: Record<string, string | number | boolean | null>;
+}) {
+  if (typeof window === 'undefined' || event.endpoint?.includes('/diagnostics/client')) return;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  void axios.post(`${API_BASE_URL}/diagnostics/client`, {
+    ...event,
+    route: window.location.pathname,
+  }, { withCredentials: true, headers }).catch(() => {
+    // Diagnostics must never affect application behavior.
+  });
+}
+
+
 api.interceptors.request.use((config) => {
   const requestId = createRequestId();
   config.headers['X-Request-ID'] = requestId;
@@ -74,18 +97,41 @@ api.interceptors.response.use(
     if (typeof window !== 'undefined') {
       const requestId = (response.config as typeof response.config & { __agentforgeRequestId?: string }).__agentforgeRequestId;
       const payload = response.data?.data;
+      const agentRecord = payload?.agent as { id?: string; document_count?: number; chunk_count?: number } | undefined;
+      const agentRecords = payload?.agents?.map?.((agent: { id?: string; document_count?: number; chunk_count?: number }) => ({
+        agentId: agent.id,
+        documentCount: agent.document_count,
+        chunkCount: agent.chunk_count,
+      }));
+      const notificationMatch = document.body.innerText.match(/(?:not\\s+grounded|grounded\\s+mode\\s+(?:inactive|off)|without\\s+grounding)[^\\n]*/i);
       console.info('[AgentForge][TRACE] request:complete', {
         requestId,
         method: response.config.method,
         url: response.config.url,
         status: response.status,
-        agentCounts: payload?.agents?.map?.((agent: { id?: string; document_count?: number; chunk_count?: number }) => ({
-          agentId: agent.id,
-          documentCount: agent.document_count,
-          chunkCount: agent.chunk_count,
-        })),
+        agentCounts: agentRecords,
         documentCount: Array.isArray(payload?.documents) ? payload.documents.length : undefined,
+        page: window.location.pathname,
+        notificationVisible: Boolean(notificationMatch),
+        notificationText: notificationMatch?.[0],
       });
+
+      if (typeof response.config.url === 'string' && /\\/agents(?:\\/[^/]+)?$/.test(response.config.url)) {
+        sendClientDiagnostic({
+          event: 'agent-response-ui-state',
+          requestId,
+          endpoint: response.config.url,
+          agentId: agentRecord?.id ?? agentRecords?.[0]?.agentId,
+          documentCount: agentRecord?.document_count ?? agentRecords?.[0]?.documentCount,
+          chunkCount: agentRecord?.chunk_count ?? agentRecords?.[0]?.chunkCount,
+          notificationVisible: Boolean(notificationMatch),
+          notificationText: notificationMatch?.[0],
+          detail: {
+            agentRecordPresent: Boolean(agentRecord),
+            agentListCount: agentRecords?.length ?? 0,
+          },
+        });
+      }
     }
     return response;
   },
