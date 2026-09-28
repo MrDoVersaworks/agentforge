@@ -86,7 +86,7 @@ export async function queryRAGAndRespond(
   onChunk?: (text: string) => void,
   requestId?: string
 ): Promise<string> {
-  logger.info('CHAT', 'RAG pipeline started', { requestId, conversationId, agentId });
+  logger.info('CHAT', 'RAG pipeline started', { requestId, conversationId });
 
   // 1. Verify ownership and fetch associated agent/user
   const convoRows = await db
