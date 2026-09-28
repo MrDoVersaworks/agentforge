@@ -246,7 +246,8 @@ export async function generateChatResponseStream(
         onChunk(chunkText);
       }
     };
-    await withTimeout(consumeStream(), CHAT_GENERATION_TIMEOUT_MS, '[ERR_GEMINI_CHAT_TIMEOUT]');
+    const remainingTimeoutMs = Math.max(1, CHAT_GENERATION_TIMEOUT_MS - (Date.now() - startedAt));
+    await withTimeout(consumeStream(), remainingTimeoutMs, '[ERR_GEMINI_CHAT_TIMEOUT]');
 
     logger.info('AI', 'Chat stream consumption completed', { requestId, phase: 'chat', chunkCount, timeToFirstChunkMs: firstChunkAt === undefined ? null : firstChunkAt - startedAt });
 
