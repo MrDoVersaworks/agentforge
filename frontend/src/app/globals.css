@@ -1102,3 +1102,108 @@ body {
 }
 
 .reviews-shell { background: var(--bg-primary); }
+
+
+/* ================================================================
+   Light-theme remediation
+   Keep the dark visual language, but give light mode its own
+   contrast, surfaces, borders, navigation, data-display, and
+   control treatment. Avoid hard-coded dark-theme assumptions.
+   ================================================================ */
+[data-theme='light'] {
+  --bg-primary: #f6f7fb;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #eef0f5;
+  --bg-elevated: #ffffff;
+  --bg-input: #ffffff;
+
+  --sidebar-bg: rgba(255, 255, 255, 0.97);
+  --header-bg: rgba(246, 247, 251, 0.94);
+
+  --glass-bg: rgba(255, 255, 255, 0.94);
+  --glass-bg-hover: #ffffff;
+  --glass-border: rgba(24, 24, 35, 0.12);
+  --glass-border-hover: rgba(94, 85, 216, 0.28);
+
+  --text-primary: #20212a;
+  --text-secondary: #555866;
+  --text-tertiary: #747786;
+  --text-accent: #4f46c7;
+
+  --accent-violet: #554bc7;
+  --accent-violet-dim: #463cb4;
+  --accent-indigo: #4f46c5;
+  --accent-cyan: #006fcf;
+  --accent-emerald: #18753a;
+  --accent-rose: #c51f2d;
+  --accent-amber: #9a4d00;
+
+  --shadow-sm: 0 1px 2px rgba(24, 24, 35, 0.06), 0 1px 3px rgba(24, 24, 35, 0.04);
+  --shadow-md: 0 8px 24px rgba(24, 24, 35, 0.10);
+  --shadow-lg: 0 18px 48px rgba(24, 24, 35, 0.14);
+  --shadow-glow: 0 6px 20px rgba(24, 24, 35, 0.07);
+  --shadow-glow-strong: 0 10px 30px rgba(24, 24, 35, 0.10);
+}
+
+[data-theme='light'] .glass {
+  background: var(--glass-bg) !important;
+  border-color: var(--glass-border) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme='light'] .glass:hover {
+  background: var(--glass-bg-hover) !important;
+  border-color: var(--glass-border-hover) !important;
+  box-shadow: var(--shadow-md);
+}
+
+[data-theme='light'] .badge-violet {
+  background: rgba(85, 75, 199, 0.10);
+  border-color: rgba(85, 75, 199, 0.20);
+}
+
+[data-theme='light'] .badge-cyan {
+  background: rgba(0, 111, 207, 0.09);
+  border-color: rgba(0, 111, 207, 0.18);
+}
+
+[data-theme='light'] .badge-emerald {
+  background: rgba(24, 117, 58, 0.09);
+  border-color: rgba(24, 117, 58, 0.18);
+}
+
+[data-theme='light'] .badge-rose {
+  background: rgba(197, 31, 45, 0.08);
+  border-color: rgba(197, 31, 45, 0.18);
+}
+
+[data-theme='light'] .skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(85, 75, 199, 0.05) 25%,
+    rgba(85, 75, 199, 0.11) 50%,
+    rgba(85, 75, 199, 0.05) 75%
+  );
+}
+
+[data-theme='light'] .prose pre {
+  background: #f0f1f5;
+  color: var(--text-primary);
+}
+
+[data-theme='light'] .prose code {
+  background: rgba(85, 75, 199, 0.08);
+}
+
+[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: rgba(85, 75, 199, 0.28);
+}
+
+[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(85, 75, 199, 0.42);
+}
+
+[data-theme='light'] ::selection {
+  background: rgba(85, 75, 199, 0.18);
+  color: var(--text-primary);
+}
