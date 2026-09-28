@@ -16,6 +16,7 @@ import settingsRoutes from './routes/settings.routes.js';
 import publicRoutes from './routes/public.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import contactRoutes from './routes/contact.routes.js';
+import diagnosticsRoutes from './routes/diagnostics.routes.js';
 
 const app = express();
 
@@ -86,6 +87,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/diagnostics/client', diagnosticsRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: '[ERR_ROUTE_NOT_FOUND] The requested API endpoint does not exist.' });
