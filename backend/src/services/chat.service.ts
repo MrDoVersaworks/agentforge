@@ -1,4 +1,4 @@
-import { eq, and, asc, desc, sql } from 'drizzle-orm';
+import { eq, and, asc, desc, gt, sql } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import { conversations, messages, agents, users, knowledgeChunks, knowledgeDocuments } from '../db/schema.js';
 import { decrypt } from './crypto.service.js';
@@ -144,22 +144,26 @@ export async function queryRAGAndRespond(
     const vectorLiteral = `[${queryEmbedding.join(',')}]`;
 
     // pgvector cosine similarity search
-    const results = await db.execute(
-      sql`SELECT
-            kc.chunk_text,
-            1 - (kc.embedding <=> ${vectorLiteral}::vector) AS similarity
-          FROM knowledge_chunks kc
-          WHERE kc.agent_id = ${convo.agent_id}::uuid
-            AND 1 - (kc.embedding <=> ${vectorLiteral}::vector) > 0.3
-          ORDER BY kc.embedding <=> ${vectorLiteral}::vector ASC
-          LIMIT 5`
-    );
+    const cosineDistance = sql<number>`${knowledgeChunks.embedding} <=> ${vectorLiteral}::vector`;
+    const similarity = sql<number>`1 - (${cosineDistance})`;
 
-    if (results.rows && Array.isArray(results.rows)) {
-      interface KnowledgeRow { chunk_text: string }
-      contextChunks = results.rows.map((row: unknown) => String((row as KnowledgeRow).chunk_text));
-      logger.info('CHAT', `Retrieved ${contextChunks.length} relevant context chunks.`);
-    }
+    const results = await db
+      .select({
+        chunk_text: knowledgeChunks.chunk_text,
+        similarity,
+      })
+      .from(knowledgeChunks)
+      .where(
+        and(
+          eq(knowledgeChunks.agent_id, convo.agent_id),
+          gt(similarity, 0.3)
+        )
+      )
+      .orderBy(asc(cosineDistance))
+      .limit(5);
+
+    contextChunks = results.map((row) => row.chunk_text);
+    logger.info('CHAT', `Retrieved ${contextChunks.length} relevant context chunks.`);
   } catch (vectorError) {
     logger.warn('CHAT', 'RAG vector lookup failed or returned no chunks, proceeding with conversation history only', vectorError);
   }
