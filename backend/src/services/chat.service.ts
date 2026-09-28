@@ -142,6 +142,11 @@ export async function queryRAGAndRespond(
   let contextChunks: string[] = [];
   try {
     const queryEmbedding = await generateEmbedding(geminiKey, userMessage);
+    logger.info('TRACE', 'RAG query embedding generated', {
+      conversationId,
+      agentId: convo.agent_id,
+      embeddingDimension: queryEmbedding.length,
+    });
     const vectorLiteral = `[${queryEmbedding.join(',')}]`;
 
     const inventoryRows = await db
