@@ -476,7 +476,7 @@ export default function DashboardLayout({
           .dashboard-sidebar {
             transform: translateX(-100%);
             width: 280px;
-            background: #0e0e1a;
+            background: var(--sidebar-bg);
           }
           .dashboard-sidebar.open {
             transform: translateX(0);
@@ -497,6 +497,42 @@ export default function DashboardLayout({
           }
         }
       `}</style>
+        <style jsx global>{`
+          [data-theme='light'] .dashboard-sidebar {
+            background: var(--sidebar-bg);
+            border-right-color: var(--glass-border);
+            box-shadow: 4px 0 24px rgba(24, 24, 35, 0.05);
+          }
+          [data-theme='light'] .sidebar-header,
+          [data-theme='light'] .sidebar-footer {
+            border-color: var(--glass-border);
+          }
+          [data-theme='light'] .user-profile-card {
+            background: rgba(85, 75, 199, 0.045);
+            border-color: var(--glass-border);
+          }
+          [data-theme='light'] .nav-btn:hover,
+          [data-theme='light'] .btn-theme-toggle:hover {
+            background: rgba(85, 75, 199, 0.075);
+          }
+          [data-theme='light'] .nav-btn.active {
+            color: var(--text-primary);
+            background: rgba(85, 75, 199, 0.11);
+            border-color: rgba(85, 75, 199, 0.18);
+            box-shadow: inset 3px 0 0 var(--accent-violet);
+          }
+          [data-theme='light'] .nav-btn.active svg {
+            color: var(--accent-violet);
+          }
+          [data-theme='light'] .key-warning-badge {
+            background: rgba(197, 31, 45, 0.07);
+            border-color: rgba(197, 31, 45, 0.16);
+          }
+          [data-theme='light'] .mobile-header {
+            background: var(--header-bg);
+            box-shadow: 0 1px 12px rgba(24, 24, 35, 0.05);
+          }
+        `}</style>
     </div>
   );
 }
