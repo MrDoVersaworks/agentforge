@@ -60,19 +60,28 @@ const errorCode = (error instanceof Error && error.message.match(/^\[ERR_[^\]]+\
 
 No business logic was otherwise changed.
 
+The first remediation commit also accidentally changed the literal SSE newline framing while rewriting the route file. Follow-up PR #27 restored the original SSE framing exactly. The resulting production code therefore contains both the intended precedence fix and the original SSE framing.
+
+## Verification and test-contract cleanup
+
+Vercel subsequently produced a `READY` backend preview for the corrected route and a `READY` production backend deployment after PR #26/#27.
+
+GitHub's backend test job initially remained red because two `gemini-embedding` assertions still expected the old error text (`Failed to generate embedding from Gemini API`). The current service intentionally returns the correlated client-safe error `[ERR_GEMINI_EMBEDDING_FAILURE] Gemini embedding failed. Check server logs for the correlated request.`.
+
+Those tests are now being updated to assert the current error contract rather than reverting the production-safe error behavior.
+
 ## Proof contract
 
-Before merging to `main`:
-
-1. Backend TypeScript/build must pass.
-2. Backend tests must pass.
+1. Backend production build must pass.
+2. Backend tests must pass against the current error contract.
 3. The corrected expression must preserve the intended error-code fallback behavior.
-4. Frontend behavior must remain unchanged.
-5. After merge, both Vercel projects must be checked independently:
+4. SSE framing must remain unchanged.
+5. Frontend behavior must remain unchanged.
+6. After merge, both Vercel projects must be checked independently:
    - frontend `agentforge`;
    - backend `agentforge-y3vy`.
-6. The backend production deployment must reach `READY`; a frontend `READY` deployment alone is not sufficient evidence.
+7. Both production deployments must reach `READY`.
 
 ## Production safety
 
-The failed build occurred after the production migration command completed successfully. No migration error was reported by this deployment. The remediation is limited to a TypeScript syntax/precedence correction in the chat route.
+The failed build occurred after the production migration command completed successfully. No migration error was reported by that deployment. The original production fix is limited to TypeScript precedence; the test cleanup changes only stale test expectations to match the already-established client-safe Gemini error contract.

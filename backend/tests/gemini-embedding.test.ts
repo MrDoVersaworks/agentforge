@@ -51,7 +51,7 @@ test('generateEmbedding rejects an embedding with the wrong dimension', async ()
   try {
     await assert.rejects(
       generateEmbedding('test-key', 'wrong dimension'),
-      /Failed to generate embedding from Gemini API/
+      /^Error: \[ERR_GEMINI_EMBEDDING_FAILURE\] Gemini embedding failed\. Check server logs for the correlated request\.$/
     );
   } finally {
     globalThis.fetch = originalFetch;
@@ -67,7 +67,7 @@ test('generateEmbedding surfaces Gemini API failures as embedding generation err
   try {
     await assert.rejects(
       generateEmbedding('test-key', 'failure'),
-      /Failed to generate embedding from Gemini API/
+      /^Error: \[ERR_GEMINI_EMBEDDING_FAILURE\] Gemini embedding failed\. Check server logs for the correlated request\.$/
     );
   } finally {
     globalThis.fetch = originalFetch;
