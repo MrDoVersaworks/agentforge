@@ -1017,3 +1017,35 @@ A failure must terminate the request with a correlated error code rather than le
 4. Invalid/missing Gemini credentials, invalid model configuration, provider rate limits, provider 5xx responses, and generation timeout each terminate with a bounded error path and no indefinite spinner.
 5. The production log contains no prompt/document content, vector values, API keys, tokens, cookies, passwords, or raw provider error bodies.
 6. The final production deployment is checked after merge; runtime behavior is not inferred from source or preview alone.
+
+
+## 2026-09-29 — Chat header agent-name marquee remediation
+
+### Trigger
+Mobile production UI showed long agent names in the chat header clipped at the right edge instead of scrolling. The previously implemented marquee behavior applied to the dashboard agent cards only; the chat page had a separate plain heading implementation.
+
+### Original behavior
+The chat page rendered the agent name in a plain `<h3>` inside a flex header without overflow-aware scrolling. On narrow viewports the browser clipped the overflowing heading.
+
+### Intended remediation
+- Detect whether the rendered chat-header name exceeds its actual available width.
+- Keep names that fit completely static.
+- For overflowing names, duplicate the label and continuously translate the track so the full name remains readable in a loop.
+- Keep the behavior responsive when the viewport changes size.
+- Respect `prefers-reduced-motion`.
+- Do not change agent data, routing, persona text, chat state, conversation behavior, or message rendering.
+
+### Changes
+- Added an overflow-aware `AgentNameMarquee` component to the chat page.
+- Added `ResizeObserver` measurement for the header viewport/text.
+- Added a duplicated off-screen label only when overflow is detected.
+- Added mobile header sizing so the name viewport can use the full available width.
+
+### Proof contract
+1. Frontend typecheck/build passes.
+2. Short agent names remain static.
+3. Long agent names scroll continuously within the chat header instead of clipping.
+4. Resizing across the overflow boundary updates the behavior.
+5. Reduced-motion users do not receive the animation.
+6. No chat/API/data behavior changes.
+7. The merged production deployment is verified after Vercel finishes.
