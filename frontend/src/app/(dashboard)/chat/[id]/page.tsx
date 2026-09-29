@@ -19,6 +19,45 @@ interface AgentApiRecord {
   updated_at: string;
 }
 
+function AgentNameMarquee({ name }: { name: string }) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    const text = textRef.current;
+    if (!viewport || !text) return;
+
+    const measure = () => {
+      setIsOverflowing(text.scrollWidth > viewport.clientWidth + 1);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(viewport);
+    observer.observe(text);
+    return () => observer.disconnect();
+  }, [name]);
+
+  return (
+    <div
+      ref={viewportRef}
+      className={`agent-name-marquee-viewport ${isOverflowing ? 'is-overflowing' : ''}`}
+      title={name}
+    >
+      <div className="agent-name-marquee-track">
+        <span ref={textRef} className="agent-name-marquee-text">{name}</span>
+        {isOverflowing && (
+          <span className="agent-name-marquee-text agent-name-marquee-clone" aria-hidden="true">
+            {name}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function mapAgent(record: AgentApiRecord): Agent {
   return {
     id: record.id,
@@ -193,7 +232,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
           {/* ── Panel Header ── */}
           <div className="chat-panel-header">
             <div className="agent-info">
-              <h3>{agent?.name ? agent?.name : 'Agent'}</h3>
+              <AgentNameMarquee name={agent?.name ? agent.name : 'Agent'} />
               <p>Persona: {agent?.systemPrompt ? agent?.systemPrompt : 'General Assistant'}</p>
             </div>
             {agent && (agent.documentCount ? agent.documentCount : 0) === 0 && (
@@ -398,9 +437,44 @@ export default function ChatPage({ params }: { params: { id: string } }) {
           background: rgba(14, 14, 26, 0.2);
           gap: 16px;
         }
-        .agent-info h3 {
+        .agent-info {
+          min-width: 0;
+          flex: 1;
+          overflow: hidden;
+        }
+        .agent-name-marquee-viewport {
+          min-width: 0;
+          width: 100%;
+          overflow: hidden;
+          position: relative;
+          white-space: nowrap;
+        }
+        .agent-name-marquee-track {
+          display: inline-flex;
+          min-width: max-content;
+        }
+        .agent-name-marquee-text {
+          flex: none;
           font-size: 1.05rem;
           font-weight: 700;
+          color: var(--text-primary);
+          white-space: nowrap;
+        }
+        .agent-name-marquee-viewport.is-overflowing .agent-name-marquee-track {
+          animation: chat-agent-name-marquee 9s linear infinite;
+          will-change: transform;
+        }
+        .agent-name-marquee-viewport.is-overflowing .agent-name-marquee-text {
+          padding-right: 3rem;
+        }
+        @keyframes chat-agent-name-marquee {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .agent-name-marquee-viewport.is-overflowing .agent-name-marquee-track {
+            animation: none;
+          }
         }
         .agent-info p {
           font-size: 0.78rem;
@@ -563,8 +637,11 @@ export default function ChatPage({ params }: { params: { id: string } }) {
           }
           .chat-panel-header {
             flex-direction: column;
-            align-items: flex-start;
+            align-items: stretch;
             gap: 12px;
+          }
+          .agent-info {
+            width: 100%;
           }
           .message-bubble {
             max-width: 90%;
