@@ -101,12 +101,12 @@ router.post(
           body.content,
           true,
           (chunk: string) => {
-            res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\\n\\n`);
+            res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
           },
           res.locals.requestId
         );
 
-        res.write('data: [DONE]\\n\\n');
+        res.write('data: [DONE]\n\n');
         res.end();
       } else {
         const response = await queryRAGAndRespond(userId, convoId, body.content, false, undefined, res.locals.requestId);
@@ -117,7 +117,7 @@ router.post(
       const errorCode = (error instanceof Error && error.message.match(/^\\[ERR_[^\\]]+\\]/)?.[0]) ?? '[ERR_CHAT_REQUEST]';
       logger.error('CHAT', 'Chat message request failed', { requestId: res.locals.requestId, conversationId: convoId, errorCode });
       if (body.stream) {
-        res.write(`data: ${JSON.stringify({ error: (error as Error).message })}\\n\\n`);
+        res.write(`data: ${JSON.stringify({ error: (error as Error).message })}\n\n`);
         res.end();
       } else {
         res.status(400).json({ success: false, message: (error as Error).message });
